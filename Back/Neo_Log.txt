@@ -1,0 +1,22 @@
+CREATE (n)
+CREATE (n: Building)
+
+CREATE (n: Building{name: 'zomet', area: '1'})
+CREATE (n: Building{name: 'mirpaa', area: '1'})
+
+MATCH (n) RETURN (n)
+MATCH (n) DELETE (n)
+
+MATCH (n: Building), (m: Building) 
+WHERE n.area = '1'
+CREATE (n)-[con: CONNECTED_TO]->(m)
+
+MATCH (n) DETACH DELETE (n)
+
+MATCH(b1:Building {name: 'zomet'})
+MATCH(b2:Building {name: 'mirpaa'})
+CREATE (b1)-[c: CABLE {type: '8'}]->(b2)
+
+
+MATCH (b1: Building) - [c: CABLE] -> (b2: Building)
+RETURN b1.name, b2.name, c.type, c.fibers
