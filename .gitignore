@@ -1,1 +1,42 @@
-/venv
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+venv/
+env/
+
+# Node/React
+Front/node_modules/
+/build
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+npm-debug.log*
+yarn-d# Python - Back folder
+Back/__pycache__/
+Back/*.pyc
+Back/*.pyo
+/venv/
+
+# Node/React - Front folder
+Front/node_modules/
+Front/build/
+Front/.env
+Front/.env.local
+Front/.env.development.local
+Front/.env.test.local
+Front/.env.production.local
+Front/npm-debug.log*
+Front/yarn-debug.log*
+Front/yarn-error.log*
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
