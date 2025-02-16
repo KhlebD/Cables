@@ -316,48 +316,24 @@ ul {
 }
 
 .section {
-    flex: 1;
     padding: 20px;
     border: 1px solid #ccc;
     border-radius: 4px;
-}
-.section-appear {
-    opacity: 0;
-    transform: translateY(-20px);
+    background: white;  /* or whatever your normal background should be */
+    
 }
 
-.section-appear-active {
-    opacity: 1;
-    transform: translateY(0);
-    transition: all 300ms ease-out;
-}
-
-.section-appear {
-    opacity: 0;
-    transform: translateY(-20px);
-}
-
-.section-appear-active {
-    opacity: 1;
-    transform: translateY(0);
-    transition: all 300ms ease-out;
-}
-
-/* Enter */
 .section-enter {
     opacity: 0;
     transform: translateY(-20px);
-    
 }
 
 .section-enter-active {
     opacity: 1;
     transform: translateY(0);
-    /*background: green;*/
-    transition: all 300ms ease-out;
+    transition: opacity 300ms ease-out, transform 300ms ease-out;  /* Specify exactly what to transition */
 }
 
-/* Exit */
 .section-exit {
     opacity: 1;
     transform: translateY(0);
@@ -366,7 +342,7 @@ ul {
 .section-exit-active {
     opacity: 0;
     transform: translateY(-20px);
-    transition: all 300ms ease-out;
+    transition: opacity 300ms ease-out, transform 300ms ease-out;
 }
 .section-header {
     display: flex;
