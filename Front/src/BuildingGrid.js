@@ -31,7 +31,7 @@ const BuildingGrid = ({ connectedBuildings, onBuildingSelect, onCableSelect, onC
 
     return (
         <div className="connections-area ">
-            <h2 className="building-item connect top"> {selectedBuilding || 'Select Building'}</h2>
+            <h2 className="building-item connect top"> {selectedBuilding || 'בחר בניין'}</h2>
 
             <div className="navigation-buttons">
                 <button
@@ -39,14 +39,14 @@ const BuildingGrid = ({ connectedBuildings, onBuildingSelect, onCableSelect, onC
                     disabled={currentPage === 0}
                     className="nav-button"
                 >
-                    Prev
+                    קודם
                 </button>
                 <button
                     onClick={() => setCurrentPage(prev => prev + 1)}
                     disabled={currentPage >= totalPages - 1}
                     className="nav-button"
                 >
-                    Next
+                    הבא
                 </button>
             </div>
             <div className="building-grid">
@@ -63,14 +63,14 @@ const BuildingGrid = ({ connectedBuildings, onBuildingSelect, onCableSelect, onC
             </div>
             <div className='add-remove-container'>
                 <AddButton
-                    itemType="building"
+                    itemType="בניין"
                     fields={[
                         {
                             name: 'name',
-                            label: 'Building Name',
+                            label: 'שם הבניין',
                             type: 'text',
                             required: true,
-                            placeholder: 'Enter building name'
+                            placeholder: 'הכנס שם בניין'
                         },
 
                     ]}
@@ -79,7 +79,7 @@ const BuildingGrid = ({ connectedBuildings, onBuildingSelect, onCableSelect, onC
                     }}
                 />
                 {selectedBuilding && (<RemoveButton
-                    itemType="building"
+                    itemType="בניין"
                     onRemove={async () => {
                         await Store.getState().removeBuilding(selectedBuilding);
                     }}

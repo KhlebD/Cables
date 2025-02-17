@@ -56,13 +56,13 @@ function AddButton({ itemType, fields, onAdd }) {
                 className="add-button"
                 onClick={() => setIsPopupOpen(!isPopupOpen)}
             >
-                Add {itemType}
+                הוסף {itemType}  
             </button>
 
             {isPopupOpen && (
                 <div className="form-popup">
                     <form onSubmit={handleSubmit} className="form">
-                        <h3>Add New {itemType}</h3>
+                        <h3>הוסף {itemType}</h3>
                         
                         {fields.map(field => (
                             <div key={field.name} className="form-group">
@@ -73,7 +73,7 @@ function AddButton({ itemType, fields, onAdd }) {
                                         onChange={(e) => handleInputChange(field.name, e.target.value)}
                                         required={field.required}
                                     >
-                                        <option value="">Select {field.label}</option>
+                                        <option value="">בחר {field.label}</option>
                                         {getFieldOptions(field).map(option => (
                                             <option key={option} value={option}>
                                                 {option}
@@ -97,14 +97,14 @@ function AddButton({ itemType, fields, onAdd }) {
 
                         <div className="form-actions">
                             <button type="submit" className="submit-button">
-                                Add {itemType}
+                                הוסף {itemType}
                             </button>
                             <button 
                                 type="button" 
                                 className="cancel-button"
                                 onClick={() => setIsPopupOpen(false)}
                             >
-                                Cancel
+                                ביטול
                             </button>
                         </div>
                     </form>

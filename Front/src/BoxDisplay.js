@@ -88,7 +88,7 @@ function BoxDisplay({ leftBuilding, rightBuilding, selectedCable, onCableSelect 
                         </div>
                     ) : (
                         <div className="empty-content">
-                            Select a building from left grid
+                            בחר בניין מצד שמאל
                         </div>
                     )}
                 </div>
@@ -143,7 +143,7 @@ function BoxDisplay({ leftBuilding, rightBuilding, selectedCable, onCableSelect 
                         </div>
                     ) : (
                         <div className="empty-content">
-                            Select a building from right grid
+                            בחר בניין מצד ימין
                         </div>
                     )}
                 </div>
@@ -153,24 +153,24 @@ function BoxDisplay({ leftBuilding, rightBuilding, selectedCable, onCableSelect 
                 {/* Only show add cable when both buildings selected */}
                 {leftBuilding && rightBuilding && (
                     <AddButton
-                        itemType="cable"
+                        itemType="כבל"
                         fields={[
                             {
                                 name: 'number',
-                                label: 'Cable Number',
+                                label: 'מזהה כבל',
                                 type: 'text',
                                 required: true
                             },
                             {
                                 name: 'cabinet1',
-                                label: `Cabinet in ${leftBuilding}`,
+                                label: `ארון בבניין שמאל`,
                                 type: 'select',
                                 required: true,
                                 options: leftBuildingCabinets.map(cab => cab.identifier)
                             },
                             {
                                 name: 'cabinet2',
-                                label: `Cabinet in ${rightBuilding}`,
+                                label: `ארון בבניין ימין`,
                                 type: 'select',
                                 required: true,
                                 options: getSecondCabinetOptions,
@@ -178,27 +178,27 @@ function BoxDisplay({ leftBuilding, rightBuilding, selectedCable, onCableSelect 
                             },
                             {
                                 name: 'num_of_fibers',
-                                label: 'Number of Fibers',
+                                label: 'מספר סיבים',
                                 type: 'select',
                                 required: true,
                                 options: ['6', '12', '24', '48']
                             },
                             {
                                 name: 'cable_type',
-                                label: 'Type',
+                                label: 'סוג',
                                 type: 'select',
                                 required: true,
                                 options: ['Single', 'Multi']
                             },
                             {
                                 name: 'cabinet1_start',
-                                label: 'Left Cabinet Start',
+                                label: 'מספר התחלתי ארון שמאל',
                                 type: 'text',
                                 required: true
                             },
                             {
                                 name: 'cabinet2_start',
-                                label: 'Right Cabinet Start',
+                                label: 'מספר התחלתי ארון ימין',
                                 type: 'text',
                                 required: true
                             }
@@ -218,7 +218,7 @@ function BoxDisplay({ leftBuilding, rightBuilding, selectedCable, onCableSelect 
                 )}
                 {leftBuilding && rightBuilding && selectedCable && (
                     <RemoveButton
-                        itemType="cable"
+                        itemType="כבל"
                         onRemove={async () => {
                             await Store.getState().removeCable(selectedCable);
                         }}

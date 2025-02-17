@@ -37,6 +37,7 @@ h2 {
 h3 {
     margin-top: 0;
     font-size: 18px;
+    justify-content: center;
 }
 
 h4 {
@@ -155,9 +156,15 @@ ul {
 }
 
 .building-item.connect.top {
-    border-color: darkblue;
-    background-color: lightblue;
+    border: 2px solid #1976D2; 
+    background-color: #42a5f5; 
+    color: white;
+    border-radius: 0;  
+    padding: 15px;
+    font-weight: 1000; 
     cursor: auto;
+    box-shadow: none; 
+    transform: none;
 }
 
 .building-item.cable.top {
@@ -346,7 +353,7 @@ ul {
 }
 .section-header {
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
     margin-bottom: 15px;
 }

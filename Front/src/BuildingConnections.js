@@ -118,7 +118,7 @@ function BuildingConnections({ onBuildingSelect, onCableSelect, selectedConnectB
             >
                 <div  ref={nodeRef} className="section">
                     <div className="section-header">
-                        <h3>Cabinets</h3>
+                        <h3>ארונות</h3>
 
                     </div>
 
@@ -138,18 +138,18 @@ function BuildingConnections({ onBuildingSelect, onCableSelect, selectedConnectB
                     </div>
                     <div className='add-remove-container'>
                         <AddButton
-                            itemType="cabinet"
+                            itemType="ארון"
                             fields={[
                                 {
                                     name: 'identifier',
-                                    label: 'Cabinet ID',
+                                    label: 'מזהה ארון',
                                     type: 'text',
                                     required: true,
-                                    placeholder: 'Enter cabinet ID'
+                                    placeholder: 'הכנס מזהה ארון'
                                 },
                                 {
                                     name: 'type',
-                                    label: 'Cabinet Type',
+                                    label: 'סוג',
                                     type: 'select',
                                     required: true,
                                     options: ['ארון', 'חפרפר', 'באקבון']
@@ -164,7 +164,7 @@ function BuildingConnections({ onBuildingSelect, onCableSelect, selectedConnectB
                             }}
                         />
                         {selectedCabinet && (<RemoveButton
-                            itemType="cabinet"
+                            itemType="ארון"
                             onRemove={async () => {
                                 await Store.getState().removeCabinet(selectedCabinet.identifier);
                             }}
