@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef } from 'react';
 import BuildingGrid from './BuildingGrid';
 import Store from './Store';
 import AddButton from './AddButton';
@@ -10,6 +10,7 @@ function BuildingConnections({ onBuildingSelect, onCableSelect, selectedConnectB
 
     const buildings = Store(state => state.buildings);
     const selectedBuilding = buildings?.find(b => b.name === selectedConnectBuilding);
+    const nodeRef = useRef(null);
 
     const findConnections = (sourceId, isBuilding = true) => {
         if (!sourceId)
@@ -108,13 +109,14 @@ function BuildingConnections({ onBuildingSelect, onCableSelect, selectedConnectB
 
             {/* Cabinets Section */}
             <CSSTransition
-                in={!!selectedConnectBuilding && !!selectedBuilding}
+                in={ Boolean(selectedConnectBuilding) }
                 timeout={300}
                 classNames="section"
                 unmountOnExit
                 appear
+                nodeRef={nodeRef}
             >
-                <div className="section">
+                <div  ref={nodeRef} className="section">
                     <div className="section-header">
                         <h3>Cabinets</h3>
 
