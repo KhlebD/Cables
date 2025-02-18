@@ -158,9 +158,11 @@ const FiberDisplay = ({ selectedCable, selectedFiber, onFiberClick }) => {
                                                         onBlur={() => setEditingFiber(null)}
                                                         autoFocus
                                                     >
-                                                        <option value="">No network</option>
-                                                        <option value="network1">Network 1</option>
-                                                        <option value="network2">Network 2</option>
+                                                        <option value="">ללא רשת</option>
+                                                        <option value="רשת 1">רשת 1</option>
+                                                        <option value="רשת 2">רשת 2</option>
+                                                        <option value="רשת 4">רשת 3</option>
+                                                        <option value="רשת 5">רשת 4</option>
                                                     </select>
                                                 </foreignObject>
                                             ) : (

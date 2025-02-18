@@ -25,14 +25,14 @@ function RemoveButton({ itemType, onRemove }) {
                 className="remove-button"
                 onClick={() => setIsPopupOpen(!isPopupOpen)}
             >
-                Remove {itemType}
+                הסר {itemType}
             </button>
 
             {isPopupOpen && (
                 <div className="form-popup">
                     <div className="form">
-                        <h3>Remove {itemType}</h3>
-                        <p>Are you sure you want to remove this {itemType}? This action CANNOT be undone!</p>
+                        <h3>הסר {itemType}</h3>
+                        <p>האם אתה בטוח שברצנוך להסיר את ה{itemType}? כל המידע הנכלל ימחק לצמיתות</p>
                         
                         {error && <div className="error-message">{error}</div>}
                         {success && <div className="success-message">{success}</div>}
@@ -42,13 +42,13 @@ function RemoveButton({ itemType, onRemove }) {
                                 className="confirm-remove-button"
                                 onClick={handleRemove}
                             >
-                                Confirm Remove
+                                הסר
                             </button>
                             <button 
                                 className="cancel-button"
                                 onClick={() => setIsPopupOpen(false)}
                             >
-                                Cancel
+                                ביטול
                             </button>
                         </div>
                     </div>

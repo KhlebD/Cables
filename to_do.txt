@@ -1,5 +1,4 @@
-Python Env (v)
-Learn JS (v)
-Learn React Flow 
-Learn Flask
-Learn Neo4j
+1. Enhance performance
+2. Improve hebrew fonts to look normal
+3. Fix bad success messages
+4. Test everything
