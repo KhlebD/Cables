@@ -143,9 +143,7 @@ def add_cabinet():
 @app.route('/cables/add', methods=['POST'])
 def add_cable():
     data = request.json
-    unique_id = f"{int(time.time())}_{random.randint(1000, 9999)}"
-    cabinet1_start = data['cabinet1_start']
-    cabinet2_start = data['cabinet2_start']
+    unique_id = data['cableID']
     query = """
     MATCH (c1:Cabinet {identifier: $cabinet1})
     MATCH (c2:Cabinet {identifier: $cabinet2})
@@ -184,8 +182,8 @@ def add_cable():
             'num_of_fibers': int(data['num_of_fibers']),
             'cable_type': data['cable_type'],
             'uid' : unique_id,
-            'cabinet1_start': int(cabinet1_start),
-            'cabinet2_start': int(cabinet2_start)
+            'cabinet1_start': int(data['cabinet1_start']),
+            'cabinet2_start': int(data['cabinet2_start'])
         }
         
         db.cypher_query(query, params)

@@ -84,7 +84,9 @@ const BuildingGrid = ({ connectedBuildings, onBuildingSelect, onCableSelect, onC
                 {selectedBuilding && (<RemoveButton
                     itemType="בניין"
                     onRemove={async () => {
-                        await Store.getState().removeBuilding(selectedBuilding);
+                        const tempSelectedBuilding = selectedBuilding;
+                        onBuildingSelect(null);
+                        await Store.getState().removeBuilding(tempSelectedBuilding);
                     }}
                 />)}
             </div>

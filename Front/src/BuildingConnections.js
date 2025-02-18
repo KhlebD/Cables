@@ -148,7 +148,7 @@ function BuildingConnections({ onBuildingSelect, onCableSelect, selectedConnectB
                                     placeholder: 'הכנס מזהה ארון'
                                 },
                                 {
-                                    name: 'type',
+                                    name: 'cabinet_type',
                                     label: 'סוג',
                                     type: 'select',
                                     required: true,
@@ -159,14 +159,16 @@ function BuildingConnections({ onBuildingSelect, onCableSelect, selectedConnectB
                                 await Store.getState().addCabinet(
                                     selectedConnectBuilding,
                                     formData.identifier,
-                                    formData.type
+                                    formData.cabinet_type
                                 );
                             }}
                         />
                         {selectedCabinet && (<RemoveButton
                             itemType="ארון"
                             onRemove={async () => {
-                                await Store.getState().removeCabinet(selectedCabinet.identifier);
+                                const tempSelectedCabinetID= selectedCabinet.identifier;
+                                onCabinetSelect(null);
+                                await Store.getState().removeCabinet(tempSelectedCabinetID);
                             }}
                         />)}
                     </div>

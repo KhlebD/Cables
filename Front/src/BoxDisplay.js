@@ -204,15 +204,15 @@ function BoxDisplay({ leftBuilding, rightBuilding, selectedCable, onCableSelect 
                             }
                         ]}
                         onAdd={async (formData) => {
-                            await Store.getState().addCable({
-                                cabinet1: formData.cabinet1,
-                                cabinet2: formData.cabinet2,
-                                number: formData.number,
-                                num_of_fibers: formData.num_of_fibers,
-                                cable_type: formData.cable_type,
-                                cabinet1_start: formData.cabinet1_start,
-                                cabinet2_start: formData.cabinet2_start
-                            });
+                            await Store.getState().addCable(
+                                formData.cabinet1,
+                                formData.cabinet2,
+                                formData.number,
+                                formData.num_of_fibers,
+                                formData.cable_type,
+                                formData.cabinet1_start,
+                                formData.cabinet2_start
+                            );
                         }}
                     />
                 )}
@@ -220,7 +220,9 @@ function BoxDisplay({ leftBuilding, rightBuilding, selectedCable, onCableSelect 
                     <RemoveButton
                         itemType="כבל"
                         onRemove={async () => {
-                            await Store.getState().removeCable(selectedCable);
+                            const tempSelectedCable = selectedCable
+                            onCableSelect(null);
+                            await Store.getState().removeCable(tempSelectedCable);
                         }}
                     />
                 )}

@@ -25,14 +25,17 @@ const Store = create((set, get) => ({
                 body: JSON.stringify({ name })
             });
 
-            const data = await response.json();
-
             if (!response.ok) {
-                return { success: false, error: data.error };
+                set({ buildings: previousState });
+                return { success: false };
             }
 
+            set((state) => ({
+                buildings: [...state.buildings, { name, cabinets: [] }]
+            }));
+
             // Refresh
-            return await get().fetchNetwork();
+            return { success: true };
 
         } catch (error) {
             console.error('Error adding building:', error);
@@ -40,34 +43,48 @@ const Store = create((set, get) => ({
         }
     },
 
-    addCabinet: async (building_name, identifier, type) => {
+    addCabinet: async (building_name, identifier, cabinet_type) => {
         try {
             const response = await fetch('http://localhost:5001/cabinets/add', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     building_name: building_name,
                     identifier: identifier,
-                    cabinet_type: type
+                    cabinet_type: cabinet_type
                 })
             });
 
             if (!response.ok) {
-                return { success: false, error: data.error };
+                return { success: false };
             }
 
+            set((state) => ({
+                buildings: state.buildings.map(building =>
+                    building.name === building_name
+                        ? {
+                            ...building,
+                            cabinets: [...(building.cabinets || []), {
+                                identifier,
+                                cabinet_type,
+                                cables: []
+                            }]
+                        }
+                        : building
+                )
+            }));
+
             // Refresh
-            return await get().fetchNetwork();
+            return { success: true };
 
         } catch (error) {
             console.error('Error adding cabinet:', error);
-            return { success: false, error: error.message };
+            throw error;
         }
     },
 
-    addCable: async (cableData) => {
+    addCable: async (cabinet1, cabinet2, number, num_of_fibers, cable_type, cabinet1_start, cabinet2_start) => {
+        const cableID = `${Date.now()}_${Math.floor(Math.random() * 9000) + 1000}`;
         try {
             const response = await fetch('http://localhost:5001/cables/add', {
                 method: 'POST',
@@ -75,134 +92,186 @@ const Store = create((set, get) => ({
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    cabinet1: cableData.cabinet1,
-                    cabinet2: cableData.cabinet2,
-                    number: cableData.number,
-                    num_of_fibers: cableData.num_of_fibers,
-                    cable_type: cableData.cable_type,
-                    cabinet1_start: cableData.cabinet1_start,
-                    cabinet2_start: cableData.cabinet2_start,
+                    cableID: cableID,
+                    cabinet1: cabinet1,
+                    cabinet2: cabinet2,
+                    number: number,
+                    num_of_fibers: num_of_fibers,
+                    cable_type: cable_type,
+                    cabinet1_start: cabinet1_start,
+                    cabinet2_start: cabinet2_start,
                 })
             });
 
-            const data = await response.json();
-
             if (!response.ok) {
-                return { success: false, error: data.error };
+                return { success: false };
             }
 
-            return await get().fetchNetwork();
+            set((state) => ({
+                buildings: state.buildings.map(building => ({
+                    ...building,
+                    cabinets: building.cabinets?.map(cabinet => {
+                        if (cabinet.identifier === cabinet1 || cabinet.identifier === cabinet2) {
+                            return {
+                                ...cabinet,
+                                cables: [...(cabinet.cables || []), {
+                                    uid: cableId,
+                                    number,
+                                    num_of_fibers,
+                                    cable_type,
+                                    fibers: Array.from({ length: num_of_fibers }, (_, i) => ({
+                                        number_cabinet1: i + cabinet1_start,
+                                        number_cabinet2: i + cabinet2_start,
+                                        fiber_type: "0",
+                                        network: null
+                                    }))
+                                }]
+                            };
+                        }
+                        return cabinet;
+                    })
+                }))
+            }));
+            return { success: true };
+
         } catch (error) {
             console.error('Error adding cable:', error);
-            return { success: false, error: error.message };
+            throw error;
         }
     },
     removeBuilding: async (buildingName) => {
+        const previousState = get().buildings;
+        set((state) => ({
+            buildings: state.buildings.filter(building => building.name !== buildingName)
+        }));
         try {
             const response = await fetch(`http://localhost:5001/buildings/remove/${buildingName}`, {
                 method: 'DELETE'
             });
-    
+
             if (!response.ok) {
-                const error = await response.json();
-                return { success: false, error: error.message };
+                set({ buildings: previousState });
+                return { success: false };
             }
-    
-            // Fetch updated network data
-            return await get().fetchNetwork();
-            
+
+            // Fetch
+            return { success: true };
+
         } catch (error) {
-            console.error('Error removing cable:', error);
-            return { success: false, error: error.message };
+            set({ buildings: previousState });
+            console.error('Error removing building:', error);
+            throw error;
         }
     },
+
     removeCabinet: async (cabinetID) => {
+        const previousState = get().buildings;
+
+        // Optimistic update
+        set((state) => ({
+            buildings: state.buildings.map(building => ({
+                ...building,
+                cabinets: building.cabinets?.filter(cab => cab.identifier !== cabinetID) || []
+            }))
+        }));
         try {
             const response = await fetch(`http://localhost:5001/cabinets/remove/${cabinetID}`, {
                 method: 'DELETE'
             });
-    
+
             if (!response.ok) {
-                const error = await response.json();
-                return { success: false, error: error.message };
+                set({ buildings: previousState });
+                return { success: false };
             }
-    
-            // Fetch updated network data
-            return await get().fetchNetwork();
-            
+
+            return { success: true };
+
         } catch (error) {
+            set({ buildings: previousState });
             console.error('Error removing cable:', error);
             return { success: false, error: error.message };
         }
     },
 
     removeCable: async (cableID) => {
+        const previousState = get().buildings;
+        // Optimistic update
+        set((state) => ({
+            buildings: state.buildings.map(building => ({
+                ...building,
+                cabinets: building.cabinets?.map(cabinet => ({
+                    ...cabinet,
+                    cables: cabinet.cables?.filter(cable => cable.uid !== cableID) || []
+                }))
+            }))
+        }));
         try {
             const response = await fetch(`http://localhost:5001/cables/remove/${cableID}`, {
                 method: 'DELETE'
             });
-    
+
             if (!response.ok) {
-                const error = await response.json();
-                return { success: false, error: error.message };
+                set({ buildings: previousState });
+                return { success: false };
             }
-    
-            // Fetch updated network data
-            return await get().fetchNetwork();
-            
+
+            return { success: true };
+
         } catch (error) {
+            set({ buildings: previousState });
             console.error('Error removing cable:', error);
-            return { success: false, error: error.message };
+            throw error;
         }
     },
 
     updateFiberNetwork: async (cableID, fiberNumber, newNetwork) => {
+        const previousState = get().buildings;
+
+        // Optimistic update
+        set((state) => ({
+            buildings: state.buildings.map(building => ({
+                ...building,
+                cabinets: building.cabinets?.map(cabinet => ({
+                    ...cabinet,
+                    cables: cabinet.cables?.map(cable =>
+                        cable.uid === cableID
+                            ? {
+                                ...cable,
+                                fibers: cable.fibers?.map(fiber =>
+                                    fiber.number_cabinet1 === fiberNumber
+                                        ? { ...fiber, network: newNetwork }
+                                        : fiber
+                                )
+                            }
+                            : cable
+                    )
+                }))
+            }))
+        }));
+
         try {
             const response = await fetch('http://localhost:5001/fibers/update-network', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
+                body: JSON.stringify({
                     cableID: cableID,
                     fiberNumber: fiberNumber,
-                    network: newNetwork 
+                    network: newNetwork
                 })
             });
-    
-            const data = await response.json();
-    
+
             if (!response.ok) {
-                return { success: false, error: data.error };
+                set({ buildings: previousState });
+                return { success: false };
             }
-    
-            // Refresh network data
-            return await get().fetchNetwork();
-    
+
+            return { success: true };
         } catch (error) {
+            set({ buildings: previousState });
             console.error('Error updating fiber network:', error);
             throw error;
         }
-    },
-    // Get a specific building
-    getBuilding: (buildingName) => {
-        const state = Store.getState();
-        return state.buildings.find(b => b.name === buildingName);
-    },
-
-    // Get cabinets for a building
-    getBuildingCabinets: (buildingName) => {
-        const state = Store.getState();
-        const building = state.buildings.find(b => b.name === buildingName);
-        return building ? building.cabinets : [];
-    },
-
-    // Get cables for a cabinet
-    getCabinetCables: (buildingName, cabinetId) => {
-        const state = Store.getState();
-        const building = state.buildings.find(b => b.name === buildingName);
-        const cabinet = building?.cabinets.find(c => c.identifier === cabinetId);
-        return cabinet ? cabinet.cables : [];
-    },
-
+    }
 }));
 
 export default Store;
