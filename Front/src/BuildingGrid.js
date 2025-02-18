@@ -26,7 +26,10 @@ const BuildingGrid = ({ connectedBuildings, onBuildingSelect, onCableSelect, onC
 
         }
         else
+        {
             onBuildingSelect(null);
+            onCableSelect(null);
+        }
     };
 
     return (

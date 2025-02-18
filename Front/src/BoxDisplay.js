@@ -131,7 +131,7 @@ function BoxDisplay({ leftBuilding, rightBuilding, selectedCable, onCableSelect 
                                 textAnchor="middle"
                                 className="cable-label"
                             >
-                                {`Cable ${cable.number} (${cable.num_of_fibers} fibers) ${cable.cable_type}`}
+                                {`${cable.cable_type} כבל  ${cable.number} (${cable.num_of_fibers} סיבים) `}
                             </text>
                         </g>
                     ))}
