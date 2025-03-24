@@ -3,6 +3,7 @@ import Store from './Store';
 import AddButton from './AddButton';
 import RemoveButton from './RemoveButton';
 import './styles.css';
+import EditButton from './EditButton';
 
 const BuildingGrid = ({ connectedBuildings, onBuildingSelect, onCableSelect, onCabinetSelect, selectedBuilding }) => {
 
@@ -87,6 +88,35 @@ const BuildingGrid = ({ connectedBuildings, onBuildingSelect, onCableSelect, onC
                         const tempSelectedBuilding = selectedBuilding;
                         onBuildingSelect(null);
                         await Store.getState().removeBuilding(tempSelectedBuilding);
+                    }}
+                />)}
+                {selectedBuilding && (<EditButton
+                    itemType="בניין"
+                    fields={[
+                        {
+                            name: 'name',
+                            label: 'שם הבניין',
+                            type: 'text',
+                            required: true,
+                            placeholder: 'הכנס שם בניין'
+                        },
+                    ]}
+                    itemData={{
+                        name: selectedBuilding,
+                        oldName: selectedBuilding
+                    }}
+                    onUpdate={async (formData) => {
+                        try {
+                            const result = await Store.getState().updateBuilding(formData);
+                            if (result.success) {
+                                // Update the selected building in the parent component
+                                onBuildingSelect(formData.name);
+                            }
+                            return result;
+                        } catch (error) {
+                            console.error("Error updating building:", error);
+                            return { success: false, error: error.message };
+                        }
                     }}
                 />)}
             </div>

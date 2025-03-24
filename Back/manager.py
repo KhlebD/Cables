@@ -1,28 +1,11 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS  
 from neomodel import config, db
-from models import Building, Cabinet, Cable, Fiber
-import time
-import random
 
 #app = Flask(__name__)
 config.DATABASE_URL = 'neo4j://neo4j:ramonramon@localhost:7687'
 app = Flask(__name__)
 CORS(app)
-
-def test():
-    try:
-        b1 = Building(name = "BCC").save()
-        b2 = Building(name = "SBC").save()
-
-        c1 = b1.add_cabinet(identifier = "Aron A", cabinet_type = "black")
-        c2 = b2.add_cabinet(identifier = "Aron B", cabinet_type = "black")
-
-        cable1 = c1.add_cable(number = 1, num_of_fibers = 12, other_cabinet = c2)
-        for i in range(1, 13):
-            cable1.add_fiber(number = i, fiber_type = "yellow", network = "bezek")
-    except Exception as e:
-        print(f"Error creating test data: {str(e)}")
 
 # RETRIEVE ALL
 @app.route('/database', methods=['GET'])
@@ -65,44 +48,6 @@ def get_network():
     except Exception as e:
         print("Error in get_network:", str(e))
         return jsonify({'error': str(e)}), 500
-    
-# GETTERS
-
-# Buildings
-@app.route('/buildings', methods=['GET'])
-def get_buildings():
-    buildings = Building.nodes.all()
-    return jsonify([{'name': b.name} for b in buildings])
-
-# Cabinets
-@app.route('/buildings/<building_name>/cabinets', methods=['GET'])
-def get_building_cabinets(building_name):
-    building = Building.nodes.get(name=building_name)
-    return jsonify([{
-        'identifier': cab.identifier,
-        'type': cab.cabinet_type
-    } for cab in building.LOCATED_AT])
-
-# Cables
-@app.route('/cabinets/<cabinet_id>/cables', methods=['GET'])
-def get_cabinet_cables(cabinet_id):
-    cabinet = Cabinet.nodes.get(identifier=cabinet_id)
-    return jsonify([{
-        'number': cable.number,
-        'num_of_fibers': cable.num_of_fibers,
-    } for cable in cabinet.CONNECTS])
-
-# Fibers
-@app.route('/cabinets/<cabinet_id>/<cable_num>/fibers', methods=['GET'])
-def get_cable_fibers(cabinet_id, cable_number):
-    cabinet = Cabinet.nodes.get(identifier=cabinet_id)
-    cable = cabinet.CONNECTS.search(number = cable_number)
-    return jsonify([{
-        'number': fiber.number,
-        'fiber_type': fiber.num_of_fibers,
-        'network': fiber.number,
-    } for fiber in cable.CONTAINS])
-    
 # ADDERS
 @app.route('/buildings/add', methods=['POST'])
 def add_building():
@@ -191,14 +136,6 @@ def add_cable():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route('/fibers/add', methods=['POST'])
-def add_fiber():
-    data = request.json
-    cabinet = cabinet.nodes.get(name=data['building_name'])
-    cable = cabinet.CONNECTS.search(number = data['cable_number'])
-    cable.add_fiber(data['number'], data['fiber_type'], data['network'])
-    return jsonify({"message": "Cable added successfully"})
-
 # REMOVERS
 @app.route('/buildings/remove/<building_name>', methods=['DELETE'])
 def remove_building(building_name):
@@ -233,15 +170,6 @@ def remove_cable(cable_id):
     db.cypher_query(query, {'cable_id': cable_id})
     return jsonify({"message": "Cable and all fibers removed successfully"})
 
-@app.route('/fibers/remove/', methods=['DELETE'])
-def remove_fiber():
-    data = request.json
-    cabinet = Cabinet.nodes.get(identifier = data['identifier'])
-    cable = cabinet.CONNECTS.search(number = data['cable_number']) 
-    cable.remove_fiber(data['fiber_number'])
-    return jsonify({"message": "fiber removed successfully"})
-
-
 # UPDATERS
 @app.route('/fibers/update-network', methods=['POST'])
 def update_network():
@@ -267,12 +195,37 @@ def update_network():
     result = db.cypher_query(query, params)
     return jsonify({"message": "Fiber network updated successfully"})
 
+@app.route('/buildings/update', methods=['PUT'])
+def update_building():
+    data = request.get_json()
+           
+    old_name = data['oldName']
+    new_name = data['newName']
+    
+    # Query to update the building name
+    query = """
+    MATCH (b:Building {name: $old_name})
+    SET b.name = $new_name
+    RETURN b
+    """
+    
+    try:
+        # Execute the Cypher query
+        result, _ = db.cypher_query(query, {
+            'old_name': old_name,
+            'new_name': new_name
+        })
+        
+        # Check if the building was found and updated
+        if not result or len(result) == 0:
+            return jsonify({'error': 'Building not found'}), 404
+            
+        return jsonify({"message": "Building updated successfully"}), 200
+        
+    except Exception as e:
+        print("Error updating building:", str(e))
+        return jsonify({'error': str(e)}), 500
 
-def main():
-    db.cypher_query("MATCH (n) DETACH DELETE n")
-    test()
-    building = Building.nodes.get(name="BCC")
-    building.add_cabinet("790-123-5", True)
 
 if __name__ == "__main__":
     app.run(debug=True, port=5001)

@@ -1,4 +1,0 @@
-1. Enhance performance VVV
-2. Improve hebrew fonts to look normal
-3. Fix bad success messages(and bad fail messages)
-4. Test everything

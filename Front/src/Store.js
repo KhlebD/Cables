@@ -115,13 +115,13 @@ const Store = create((set, get) => ({
                             return {
                                 ...cabinet,
                                 cables: [...(cabinet.cables || []), {
-                                    uid: cableId,
+                                    uid: cableID,
                                     number,
                                     num_of_fibers,
                                     cable_type,
                                     fibers: Array.from({ length: num_of_fibers }, (_, i) => ({
-                                        number_cabinet1: i + cabinet1_start,
-                                        number_cabinet2: i + cabinet2_start,
+                                        number_cabinet1: parseInt(cabinet1_start) + i,
+                                        number_cabinet2: parseInt(cabinet2_start) + i,
                                         fiber_type: "0",
                                         network: null
                                     }))
@@ -269,6 +269,43 @@ const Store = create((set, get) => ({
         } catch (error) {
             set({ buildings: previousState });
             console.error('Error updating fiber network:', error);
+            throw error;
+        }
+    },
+    
+    updateBuilding: async (formData) => {
+        const previousState = get().buildings;
+        const oldName = formData.oldName;
+        const newName = formData.name;
+        
+        // Optimistic update
+        set((state) => ({
+            buildings: state.buildings.map(building => 
+                building.name === oldName 
+                    ? { ...building, name: newName }
+                    : building
+            )
+        }));
+        
+        try {
+            const response = await fetch('http://localhost:5001/buildings/update', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    oldName, 
+                    newName 
+                })
+            });
+    
+            if (!response.ok) {
+                set({ buildings: previousState });
+                return { success: false };
+            }
+    
+            return { success: true };
+        } catch (error) {
+            set({ buildings: previousState });
+            console.error('Error updating building:', error);
             throw error;
         }
     }

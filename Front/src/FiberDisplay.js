@@ -105,7 +105,7 @@ const FiberDisplay = ({ selectedCable, selectedFiber, onFiberClick }) => {
                                                 y1={baseY + 20}
                                                 x2={getFiberPosition(index, fibers.length)}
                                                 y2={baseY + 220}
-                                                stroke={fiber === selectedFiber ? '#339cff' : (fiber.network ? 'blue' : '#808080')} 
+                                                stroke={fiber === selectedFiber ? '#339cff' : (fiber.network ? 'blue' : '#808080')}
                                                 strokeWidth="14"
                                                 onMouseEnter={() => setHoveredFiberId(fiber.number_cabinet1)}
                                                 onMouseLeave={() => setHoveredFiberId(null)}
@@ -118,7 +118,7 @@ const FiberDisplay = ({ selectedCable, selectedFiber, onFiberClick }) => {
                                                 y={baseY + 15}
                                                 textAnchor="middle"
                                                 className="fiber-info"
-                                                opacity={fiber.network ? "1" : "0.7"} 
+                                                opacity={fiber.network ? "1" : "0.7"}
                                             >
                                                 {fiber.number_cabinet1}
                                             </text>
@@ -129,19 +129,20 @@ const FiberDisplay = ({ selectedCable, selectedFiber, onFiberClick }) => {
                                                 y={baseY + 235}
                                                 textAnchor="middle"
                                                 className="fiber-info"
-                                                opacity={fiber.network ? "1" : "0.7"} 
+                                                opacity={fiber.network ? "1" : "0.7"}
                                             >
                                                 {fiber.number_cabinet2}
                                             </text>
 
                                             {editingFiber === fiber.number_cabinet1 ? (
                                                 <foreignObject
-                                                    x={getFiberPosition(index, fibers.length) - 40}
-                                                    y={baseY + 240}
+                                                    x={getFiberPosition(index, fibers.length) - 50}
+                                                    y={baseY + 237}
                                                     width="100"
                                                     height="30"
                                                 >
-                                                    <select
+                                                    <input
+                                                        type="text"
                                                         value={fiber.network || ''}
                                                         onChange={async (e) => {
                                                             try {
@@ -157,13 +158,8 @@ const FiberDisplay = ({ selectedCable, selectedFiber, onFiberClick }) => {
                                                         }}
                                                         onBlur={() => setEditingFiber(null)}
                                                         autoFocus
-                                                    >
-                                                        <option value="">ללא רשת</option>
-                                                        <option value="רשת 1">רשת 1</option>
-                                                        <option value="רשת 2">רשת 2</option>
-                                                        <option value="רשת 4">רשת 3</option>
-                                                        <option value="רשת 5">רשת 4</option>
-                                                    </select>
+                                                        placeholder="הכנס רשת"
+                                                    />
                                                 </foreignObject>
                                             ) : (
                                                 <text
@@ -171,9 +167,9 @@ const FiberDisplay = ({ selectedCable, selectedFiber, onFiberClick }) => {
                                                     y={baseY + 255}
                                                     textAnchor="middle"
                                                     className="fiber-info"
-                                                    opacity={fiber.network ? "1" : "0.7"} 
+                                                    opacity={fiber.network ? "1" : "0.7"}
                                                 >
-                                                    {fiber.network || 'No network'}
+                                                    {fiber.network || 'ללא רשת'}
                                                 </text>
                                             )}
                                         </g>
