@@ -3,6 +3,7 @@ import BuildingGrid from './BuildingGrid';
 import Store from './Store';
 import AddButton from './AddButton';
 import RemoveButton from './RemoveButton';
+import EditButton from './EditButton';
 import './styles.css';
 import { CSSTransition } from 'react-transition-group';
 
@@ -169,6 +170,56 @@ function BuildingConnections({ onBuildingSelect, onCableSelect, selectedConnectB
                                 const tempSelectedCabinetID= selectedCabinet.identifier;
                                 onCabinetSelect(null);
                                 await Store.getState().removeCabinet(tempSelectedCabinetID);
+                            }}
+                        />)}
+                        {selectedCabinet && (<EditButton
+                            itemType="ארון"
+                            fields={[
+                                {
+                                    name: 'identifier',
+                                    label: 'מזהה ארון',
+                                    type: 'text',
+                                    required: true,
+                                    placeholder: 'הכנס מזהה ארון'
+                                },
+                                {
+                                    name: 'cabinet_type',
+                                    label: 'סוג',
+                                    type: 'select',
+                                    required: true,
+                                    options: ['ארון', 'חפרפר', 'באקבון']
+                                },
+                                {
+                                    name: 'building_name',
+                                    label: 'בניין',
+                                    type: 'text',
+                                    required: true,
+                                    readOnly: true
+                                }
+                            ]}
+                            itemData={{
+                                identifier: selectedCabinet.identifier,
+                                cabinet_type: selectedCabinet.cabinet_type,
+                                building_name: selectedConnectBuilding,
+                                oldIdentifier: selectedCabinet.identifier
+                            }}
+                            onUpdate={async (formData) => {
+                                try {
+                                    const result = await Store.getState().updateCabinet(formData);
+                                    if (result.success) {
+                                        // Update the selected cabinet in the parent component
+                                        const updatedCabinet = {
+                                            ...selectedCabinet,
+                                            identifier: formData.identifier,
+                                            cabinet_type: formData.cabinet_type
+                                        };
+                                        onCabinetSelect(updatedCabinet);
+                                    }
+                                    return result;
+                                } catch (error) {
+                                    console.error("Error updating cabinet:", error);
+                                    return { success: false, error: error.message };
+                                }
                             }}
                         />)}
                     </div>

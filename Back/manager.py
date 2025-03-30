@@ -177,7 +177,6 @@ def update_network():
     data = request.get_json()
     cable_id = data.get('cableID')
     number_cabinet1 = data.get('fiberNumber')
-    print(number_cabinet1)
     new_network = data.get('network')
 
     query = """
@@ -202,15 +201,13 @@ def update_building():
     old_name = data['oldName']
     new_name = data['newName']
     
-    # Query to update the building name
     query = """
     MATCH (b:Building {name: $old_name})
     SET b.name = $new_name
     RETURN b
     """
-    
+
     try:
-        # Execute the Cypher query
         result, _ = db.cypher_query(query, {
             'old_name': old_name,
             'new_name': new_name
@@ -226,6 +223,36 @@ def update_building():
         print("Error updating building:", str(e))
         return jsonify({'error': str(e)}), 500
 
+@app.route('/cabinets/update', methods=['PUT'])
+def update_cabinet():
+    data = request.get_json()
+
+    old_idnetifier = data['oldIdentifier']
+    new_identifier = data['newIdentifier']
+    new_cabinet_type = data['newCabinetType']
+
+    query = """
+    MATCH (cab:Cabinet {identifier: $old_idnetifier})
+    SET cab.identifier = $new_identifier
+    SET cab.cabinet_type = $new_cabinet_type
+    RETURN cab
+    """
+
+    try:
+        result, _ = db.cypher_query(query, {
+            'old_idnetifier': old_idnetifier,
+            'new_identifier': new_identifier,
+            'new_cabinet_type': new_cabinet_type
+        })
+
+        if not result or len(result) == 0:
+            return jsonify({'error': 'Cabinet not found'}), 404
+            
+        return jsonify({"message": "Cabinet updated successfully"}), 200
+        
+    except Exception as e:
+        print("Error updating Cabinet:", str(e))
+        
 
 if __name__ == "__main__":
     app.run(debug=True, port=5001)

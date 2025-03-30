@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import Store from './Store';
 import AddButton from './AddButton';
 import RemoveButton from './RemoveButton';
-import './styles.css';
 import EditButton from './EditButton';
+import './styles.css';
+
 
 const BuildingGrid = ({ connectedBuildings, onBuildingSelect, onCableSelect, onCabinetSelect, selectedBuilding }) => {
 
