@@ -125,7 +125,7 @@ ul {
     padding: 10px;
     border: 2px solid var(--border);
     border-radius: 8px;
-    cursor: pointer;
+    cursor: grab;
     text-align: center;
     transition: transform 0.2s;
     background: white;
@@ -179,6 +179,26 @@ ul {
     bottom: 0;
     cursor: auto;
 }
+
+.building-item.dragging {
+    opacity: 0.5;
+    transform: scale(0.95);
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+    cursor: grabbing;
+}
+
+.building-item.drag-over {
+    border: 2px dashed #4a90e2;
+    transform: scale(1.05);
+    background-color: rgba(74, 144, 226, 0.1);
+}
+
+@keyframes reorder {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
 
 /* CABLES */
 .button-container {

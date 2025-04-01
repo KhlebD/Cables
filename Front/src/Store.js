@@ -16,6 +16,24 @@ const Store = create((set, get) => ({
         }
     },
 
+    updateBuildingOrder: (newOrder) => {
+        set((state) => {
+            // Create a map of building orders
+            const orderMap = {};
+            newOrder.forEach(item => {
+                orderMap[item.name] = item.order;
+            });
+
+            // Update the buildings array with the new order
+            const updatedBuildings = state.buildings.map(building => ({
+                ...building,
+                order: orderMap[building.name] !== undefined ? orderMap[building.name] : building.order
+            }));
+            console.log(updatedBuildings);
+            return { buildings: updatedBuildings };
+        });
+    },
+
     // Add new building
     addBuilding: async (name) => {
         try {
@@ -26,17 +44,29 @@ const Store = create((set, get) => ({
             });
 
             if (!response.ok) {
-                set({ buildings: previousState });
                 return { success: false };
             }
 
-            set((state) => ({
-                buildings: [...state.buildings, { name, cabinets: [] }]
-            }));
+            set((state) => {
+                // Find the highest current order
+                let maxOrder = -1;
+                state.buildings.forEach(building => {
+                    if (building.order !== undefined && building.order > maxOrder) {
+                        maxOrder = building.order;
+                    }
+                });
 
-            // Refresh
+                // Add the new building with order = maxOrder + 1
+                return {
+                    buildings: [...state.buildings, {
+                        name,
+                        cabinets: [],
+                        order: maxOrder + 1
+                    }]
+                };
+            });
+
             return { success: true };
-
         } catch (error) {
             console.error('Error adding building:', error);
             throw error;
