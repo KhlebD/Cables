@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import Store from './Store';
 import AddButton from './AddButton';
 import RemoveButton from './RemoveButton';
+import EditButton from './EditButton';
 import './styles.css';
+
 
 const BuildingGrid = ({ connectedBuildings, onBuildingSelect, onCableSelect, onCabinetSelect, selectedBuilding }) => {
 
@@ -196,6 +198,35 @@ const BuildingGrid = ({ connectedBuildings, onBuildingSelect, onCableSelect, onC
                         try {
                             const result = await Store.getState().updateBuilding(formData);
                             if (result.success) {
+                                onBuildingSelect(formData.name);
+                            }
+                            return result;
+                        } catch (error) {
+                            console.error("Error updating building:", error);
+                            return { success: false, error: error.message };
+                        }
+                    }}
+                />)}
+                {selectedBuilding && (<EditButton
+                    itemType="בניין"
+                    fields={[
+                        {
+                            name: 'name',
+                            label: 'שם הבניין',
+                            type: 'text',
+                            required: true,
+                            placeholder: 'הכנס שם בניין'
+                        },
+                    ]}
+                    itemData={{
+                        name: selectedBuilding,
+                        oldName: selectedBuilding
+                    }}
+                    onUpdate={async (formData) => {
+                        try {
+                            const result = await Store.getState().updateBuilding(formData);
+                            if (result.success) {
+                                // Update the selected building in the parent component
                                 onBuildingSelect(formData.name);
                             }
                             return result;
