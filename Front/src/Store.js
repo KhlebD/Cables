@@ -16,22 +16,47 @@ const Store = create((set, get) => ({
         }
     },
 
-    updateBuildingOrder: (newOrder) => {
+    updateBuildingOrder: async (newOrder) => {
+        const previousState = get().buildings;
+        
+        // Optimistic update - immediately update the UI
         set((state) => {
             // Create a map of building orders
             const orderMap = {};
             newOrder.forEach(item => {
                 orderMap[item.name] = item.order;
             });
-
+            
             // Update the buildings array with the new order
             const updatedBuildings = state.buildings.map(building => ({
                 ...building,
                 order: orderMap[building.name] !== undefined ? orderMap[building.name] : building.order
             }));
-            console.log(updatedBuildings);
+            
             return { buildings: updatedBuildings };
         });
+        
+        try {
+            // Send the update to the backend
+            const response = await fetch('http://localhost:5001/buildings/update-order', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newOrder)
+            });
+    
+            if (!response.ok) {
+                // Revert to previous state if the update failed
+                set({ buildings: previousState });
+                return { success: false };
+            }
+    
+            return { success: true };
+        } catch (error) {
+            // Revert to previous state if there was an error
+            set({ buildings: previousState });
+            console.error('Error updating building order:', error);
+            throw error;
+        }
     },
 
     // Add new building

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './styles.css'; 
 
 function AddButton({ itemType, fields, onAdd }) {
@@ -6,6 +6,39 @@ function AddButton({ itemType, fields, onAdd }) {
     const [formData, setFormData] = useState({});
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    const formRef = useRef(null);
+    const buttonRef = useRef(null);
+
+    // Reset form data when popup closes
+    useEffect(() => {
+        if (!isPopupOpen) {
+            setFormData({});
+            setError('');
+            setSuccess('');
+        }
+    }, [isPopupOpen]);
+
+    // Handle clicks outside the form
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            // If the form is open and the click is outside both the form and the button
+            if (isPopupOpen && formRef.current && buttonRef.current && 
+                !formRef.current.contains(event.target) && 
+                !buttonRef.current.contains(event.target)) {
+                setIsPopupOpen(false);
+            }
+        };
+
+        // Add event listener when the popup is open
+        if (isPopupOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+
+        // Clean up the event listener
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [isPopupOpen]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -16,7 +49,7 @@ function AddButton({ itemType, fields, onAdd }) {
             setTimeout(() => {
                 setIsPopupOpen(false);
                 setSuccess('');
-            }, 3000);
+            }, 1500);
         } catch (error) {
             setError(error.message);
         }
@@ -25,14 +58,12 @@ function AddButton({ itemType, fields, onAdd }) {
      // Get options for a field
      const getFieldOptions = (field) => {
         if (typeof field.options === 'function') 
-           
             return field.options(formData);
         
         return field.options;
     };
 
     const handleInputChange = (fieldName, value) => {
-
         const newFormData = {
             ...formData,
             [fieldName]: value
@@ -53,6 +84,7 @@ function AddButton({ itemType, fields, onAdd }) {
     return (
         <div className="add-building-container">
             <button 
+                ref={buttonRef}
                 className="add-button"
                 onClick={() => setIsPopupOpen(!isPopupOpen)}
             >
@@ -61,7 +93,7 @@ function AddButton({ itemType, fields, onAdd }) {
 
             {isPopupOpen && (
                 <div className="form-popup">
-                    <form onSubmit={handleSubmit} className="form">
+                    <form ref={formRef} onSubmit={handleSubmit} className="form">
                         <h3>הוסף {itemType}</h3>
                         
                         {fields.map(field => (

@@ -36,7 +36,8 @@ def get_network():
         }) as cabinets
         RETURN collect({
             name: b.name,
-            cabinets: cabinets
+            cabinets: cabinets,
+            order: b.display_order
         }) as buildings
         """
         results, _ = db.cypher_query(query)
@@ -253,7 +254,32 @@ def update_cabinet():
     except Exception as e:
         print("Error updating Cabinet:", str(e))
         
-
+@app.route('/buildings/update-order', methods=['PUT'])
+def update_building_order():
+    data = request.get_json()
+    
+    if not data or not isinstance(data, list):
+        return jsonify({'error': 'Invalid data format, expected an array of buildings with name and order'}), 400
+    
+    try:
+        # Process each building update in a single transaction
+        query = """
+        UNWIND $orders as order_item
+        MATCH (b:Building {name: order_item.name})
+        SET b.display_order = order_item.order
+        """
+        
+        params = {'orders': data}
+        
+        # Execute the query
+        db.cypher_query(query, params)
+        
+        return jsonify({"message": "Building order updated successfully"}), 200
+        
+    except Exception as e:
+        print(f"Error updating building order: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+    
 if __name__ == "__main__":
     app.run(debug=True, port=5001)
 

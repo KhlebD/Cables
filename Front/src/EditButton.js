@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './styles.css'; 
 
 function EditButton({ itemType, fields, onUpdate, itemData }) {
@@ -6,13 +6,48 @@ function EditButton({ itemType, fields, onUpdate, itemData }) {
     const [formData, setFormData] = useState({});
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    const formRef = useRef(null);
+    const buttonRef = useRef(null);
+    const containerRef = useRef(null);
 
-    // Initialize form data with existing item data when component mounts or itemData changes
+    // Initialize form data when component mounts or itemData changes
     useEffect(() => {
         if (itemData) {
             setFormData(itemData);
         }
     }, [itemData]);
+
+    // Reset error and success messages when popup closes
+    useEffect(() => {
+        if (!isPopupOpen) {
+            setError('');
+            setSuccess('');
+            setFormData({});
+            
+        }
+    }, [isPopupOpen]);
+
+    // Handle clicks outside the form
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            // If the form is open and the click is outside both the form and the button
+            if (isPopupOpen && formRef.current && buttonRef.current && 
+                !formRef.current.contains(event.target) && 
+                !buttonRef.current.contains(event.target)) {
+                setIsPopupOpen(false);
+            }
+        };
+
+        // Add event listener when the popup is open
+        if (isPopupOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+
+        // Clean up the event listener
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [isPopupOpen]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -21,8 +56,7 @@ function EditButton({ itemType, fields, onUpdate, itemData }) {
             setSuccess(`${itemType} עודכן בהצלחה!`);
             setTimeout(() => {
                 setIsPopupOpen(false);
-                setSuccess('');
-            }, 3000);
+            }, 1500);
         } catch (error) {
             setError(error.message || 'עדכון נכשל');
         }
@@ -55,8 +89,9 @@ function EditButton({ itemType, fields, onUpdate, itemData }) {
     };
 
     return (
-        <div className="edit-item-container">
+        <div className="add-building-container" ref={containerRef}>
             <button 
+                ref={buttonRef}
                 className="edit-button"
                 onClick={() => setIsPopupOpen(!isPopupOpen)}
             >
@@ -64,8 +99,8 @@ function EditButton({ itemType, fields, onUpdate, itemData }) {
             </button>
 
             {isPopupOpen && (
-                <div className="form-popup">
-                    <form onSubmit={handleSubmit} className="form">
+                <div className="form-popup" style={{ position: 'absolute', top: '100%', left: '0' }}>
+                    <form ref={formRef} onSubmit={handleSubmit} className="form">
                         <h3>ערוך {itemType}</h3>
                         
                         {fields.map(field => (

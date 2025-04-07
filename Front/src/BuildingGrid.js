@@ -38,7 +38,7 @@ const BuildingGrid = ({ connectedBuildings, onBuildingSelect, onCableSelect, onC
 
     const getCurrentBuildings = () => {
         const start = currentPage * buildingsPerPage;
-        return buildings.slice(start, start + buildingsPerPage);
+        return orderedBuildings.slice(start, start + buildingsPerPage);
     };
 
     const totalPages = Math.ceil(buildings.length / buildingsPerPage);
@@ -91,16 +91,21 @@ const BuildingGrid = ({ connectedBuildings, onBuildingSelect, onCableSelect, onC
         if (!draggedBuilding || draggedBuilding.name === targetBuilding.name) {
             return;
         }
-
+    
+        // Create a new array with updated order
         const updatedOrder = orderedBuildings.map(building => ({
             name: building.name,
             order: building.order
         }));
-
+    
+        // Find dragged and target indices
         const draggedIndex = updatedOrder.findIndex(b => b.name === draggedBuilding.name);
         const targetIndex = updatedOrder.findIndex(b => b.name === targetBuilding.name);
+        
+        // Remove the dragged item
         const [removed] = updatedOrder.splice(draggedIndex, 1);
         
+        // Insert it at the target position
         updatedOrder.splice(targetIndex, 0, removed);
         
         // Update the order values to match the new array indices
@@ -108,7 +113,7 @@ const BuildingGrid = ({ connectedBuildings, onBuildingSelect, onCableSelect, onC
             building.order = index;
         });
         
-        // Update the order in the store
+        // Update the order in the store - this now persists to the backend
         updateBuildingOrder(updatedOrder);
     };
 
@@ -177,34 +182,6 @@ const BuildingGrid = ({ connectedBuildings, onBuildingSelect, onCableSelect, onC
                         const tempSelectedBuilding = selectedBuilding;
                         onBuildingSelect(null);
                         await Store.getState().removeBuilding(tempSelectedBuilding);
-                    }}
-                />)}
-                {selectedBuilding && (<EditButton
-                    itemType="בניין"
-                    fields={[
-                        {
-                            name: 'name',
-                            label: 'שם הבניין',
-                            type: 'text',
-                            required: true,
-                            placeholder: 'הכנס שם בניין'
-                        },
-                    ]}
-                    itemData={{
-                        name: selectedBuilding,
-                        oldName: selectedBuilding
-                    }}
-                    onUpdate={async (formData) => {
-                        try {
-                            const result = await Store.getState().updateBuilding(formData);
-                            if (result.success) {
-                                onBuildingSelect(formData.name);
-                            }
-                            return result;
-                        } catch (error) {
-                            console.error("Error updating building:", error);
-                            return { success: false, error: error.message };
-                        }
                     }}
                 />)}
                 {selectedBuilding && (<EditButton
