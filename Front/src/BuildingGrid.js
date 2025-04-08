@@ -1,64 +1,107 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Store from './Store';
 import AddButton from './AddButton';
 import RemoveButton from './RemoveButton';
 import EditButton from './EditButton';
 import './styles.css';
 
-
-const BuildingGrid = ({ connectedBuildings, onBuildingSelect, onCableSelect, onCabinetSelect, selectedBuilding }) => {
-
+const BuildingGrid = ({ 
+  connectedBuildings, 
+  onBuildingSelect, 
+  onCableSelect, 
+  onCabinetSelect, 
+  selectedBuilding
+}) => {
     const buildings = Store(state => state.buildings);
     const updateBuildingOrder = Store(state => state.updateBuildingOrder);
-    const [currentPage, setCurrentPage] = useState(0);  // Start at page 0
-    const buildingsPerPage = 20;
+    const [currentPage, setCurrentPage] = useState(0);
     const [draggedBuilding, setDraggedBuilding] = useState(null);
     const [dragOverBuilding, setDragOverBuilding] = useState(null);
+    const [isDragging, setIsDragging] = useState(false);
+    const [showLeftIndicator, setShowLeftIndicator] = useState(false);
+    const [showRightIndicator, setShowRightIndicator] = useState(false);
+    const gridRef = useRef(null);
+    const gridContainerRef = useRef(null);
+    const pageChangeTimerRef = useRef(null);
+    const buildingsPerPage = 20;
 
-
-    const orderedBuildings = [...buildings].sort((a, b) =>
-        (a.order !== undefined && b.order !== undefined) ?
-            a.order - b.order : 0
+    // Get ordered buildings
+    const orderedBuildings = [...buildings].sort((a, b) => 
+      (a.order !== undefined && b.order !== undefined) ? 
+        a.order - b.order : 0
     );
 
+    // Initialize order if not already set
     useEffect(() => {
-        const needsOrder = buildings.some(building => building.order === undefined);
-
-        if (needsOrder && buildings.length > 0) {
-            
-            const newOrder = buildings.map((building, index) => ({
-                name: building.name,
-                order: index
-            }));
-
-            
-            updateBuildingOrder(newOrder);
-        }
+      const needsOrder = buildings.some(building => building.order === undefined);
+      
+      if (needsOrder && buildings.length > 0) {
+        const newOrder = buildings.map((building, index) => ({
+          name: building.name,
+          order: index
+        }));
+        
+        updateBuildingOrder(newOrder);
+      }
     }, [buildings, updateBuildingOrder]);
 
+    // Get buildings for current page
     const getCurrentBuildings = () => {
         const start = currentPage * buildingsPerPage;
         return orderedBuildings.slice(start, start + buildingsPerPage);
     };
 
-    const totalPages = Math.ceil(buildings.length / buildingsPerPage);
+    const totalPages = Math.ceil(orderedBuildings.length / buildingsPerPage);
 
+    // Clean up timers on unmount
+    useEffect(() => {
+        return () => {
+            if (pageChangeTimerRef.current) {
+                clearTimeout(pageChangeTimerRef.current);
+                pageChangeTimerRef.current = null;
+            }
+        };
+    }, []);
+
+    // Comprehensive cleanup function for all drag states
+    const cleanupDragStates = () => {
+        setDraggedBuilding(null);
+        setDragOverBuilding(null);
+        setIsDragging(false);
+        setShowLeftIndicator(false);
+        setShowRightIndicator(false);
+        
+        if (pageChangeTimerRef.current) {
+            clearTimeout(pageChangeTimerRef.current);
+            pageChangeTimerRef.current = null;
+        }
+        
+        // Remove any lingering dragging classes from all building items
+        const buildingItems = document.querySelectorAll('.building-item');
+        buildingItems.forEach(item => {
+            item.classList.remove('dragging');
+            item.classList.remove('drag-over');
+        });
+    };
 
     const handleBuildingClick = (buildingName) => {
-        onCabinetSelect(null);
-        if (selectedBuilding != buildingName) {
-            onBuildingSelect(buildingName);
-            onCableSelect(null);
-
-        }
-        else {
-            onBuildingSelect(null);
-            onCableSelect(null);
+        if (!isDragging) {
+            onCabinetSelect(null);
+            if (selectedBuilding !== buildingName) {
+                onBuildingSelect(buildingName);
+                onCableSelect(null);
+            } else {
+                onBuildingSelect(null);
+                onCableSelect(null);
+            }
         }
     };
 
+    // Drag and drop handlers
     const handleDragStart = (e, building) => {
+        console.log('Drag start', building.name);
         setDraggedBuilding(building);
+        setIsDragging(true);
         e.dataTransfer.effectAllowed = 'move';
         e.dataTransfer.setData('text/plain', building.name);
         
@@ -69,16 +112,67 @@ const BuildingGrid = ({ connectedBuildings, onBuildingSelect, onCableSelect, onC
     };
 
     const handleDragEnd = (e) => {
-        e.target.classList.remove('dragging');
-        setDraggedBuilding(null);
-        setDragOverBuilding(null);
+        console.log('Drag end');
+        cleanupDragStates();
     };
 
-    const handleDragOver = (e, building) => {
+    // Container dragover handler for edge detection
+    const handleContainerDragOver = (e) => {
+        e.preventDefault();
+        console.log('Container drag over', e.clientX, e.clientY);
+        
+        if (!isDragging || !gridRef.current) return;
+        
+        const gridRect = gridRef.current.getBoundingClientRect();
+        const leftEdge = gridRect.left + 50; // 50px from left edge
+        const rightEdge = gridRect.right - 50; // 50px from right edge
+        
+        if (e.clientX < leftEdge && currentPage > 0) {
+            console.log('Near left edge, showing indicator');
+            setShowLeftIndicator(true);
+            setShowRightIndicator(false);
+            
+            if (!pageChangeTimerRef.current) {
+                console.log('Setting timer for page change to previous');
+                pageChangeTimerRef.current = setTimeout(() => {
+                    console.log('Changing to previous page');
+                    setCurrentPage(prev => prev - 1);
+                    pageChangeTimerRef.current = null;
+                }, 800);
+            }
+        } else if (e.clientX > rightEdge && currentPage < totalPages - 1) {
+            console.log('Near right edge, showing indicator');
+            setShowLeftIndicator(false);
+            setShowRightIndicator(true);
+            
+            if (!pageChangeTimerRef.current) {
+                console.log('Setting timer for page change to next');
+                pageChangeTimerRef.current = setTimeout(() => {
+                    console.log('Changing to next page');
+                    setCurrentPage(prev => prev + 1);
+                    pageChangeTimerRef.current = null;
+                }, 800);
+            }
+        } else {
+            // Not near any edge
+            setShowLeftIndicator(false);
+            setShowRightIndicator(false);
+            
+            if (pageChangeTimerRef.current) {
+                clearTimeout(pageChangeTimerRef.current);
+                pageChangeTimerRef.current = null;
+            }
+        }
+    };
+
+    const handleBuildingDragOver = (e, building) => {
         e.preventDefault();
         if (draggedBuilding && building.name !== draggedBuilding.name) {
             setDragOverBuilding(building);
         }
+        
+        // Call the container dragover handler to check for edge detection
+        handleContainerDragOver(e);
     };
 
     const handleDragLeave = () => {
@@ -87,20 +181,24 @@ const BuildingGrid = ({ connectedBuildings, onBuildingSelect, onCableSelect, onC
 
     const handleDrop = (e, targetBuilding) => {
         e.preventDefault();
+        console.log('Drop on', targetBuilding.name);
         
         if (!draggedBuilding || draggedBuilding.name === targetBuilding.name) {
+            cleanupDragStates(); // Still clean up even if no valid drop
             return;
         }
-    
+
         // Create a new array with updated order
         const updatedOrder = orderedBuildings.map(building => ({
             name: building.name,
             order: building.order
         }));
-    
-        // Find dragged and target indices
+
+        // Find dragged and target indices in the full list
         const draggedIndex = updatedOrder.findIndex(b => b.name === draggedBuilding.name);
         const targetIndex = updatedOrder.findIndex(b => b.name === targetBuilding.name);
+        
+        console.log('Moving from index', draggedIndex, 'to', targetIndex);
         
         // Remove the dragged item
         const [removed] = updatedOrder.splice(draggedIndex, 1);
@@ -113,12 +211,18 @@ const BuildingGrid = ({ connectedBuildings, onBuildingSelect, onCableSelect, onC
             building.order = index;
         });
         
-        // Update the order in the store - this now persists to the backend
+        // Update the order in the store
         updateBuildingOrder(updatedOrder);
+        
+        // Clean up all drag states after successful drop
+        cleanupDragStates();
     };
 
     return (
-        <div className="connections-area">
+        <div 
+            className="connections-area"
+            ref={gridRef}
+        >
             <h2 className="building-item connect top"> {selectedBuilding || 'בחר בניין'}</h2>
 
             <div className="navigation-buttons">
@@ -129,6 +233,7 @@ const BuildingGrid = ({ connectedBuildings, onBuildingSelect, onCableSelect, onC
                 >
                     קודם
                 </button>
+                <span className="page-indicator">{currentPage + 1} / {Math.max(1, totalPages)}</span>
                 <button
                     onClick={() => setCurrentPage(prev => prev + 1)}
                     disabled={currentPage >= totalPages - 1}
@@ -138,26 +243,49 @@ const BuildingGrid = ({ connectedBuildings, onBuildingSelect, onCableSelect, onC
                 </button>
             </div>
             
-            <div className="building-grid">
-                {getCurrentBuildings().map((building) => (
-                    <div
-                        key={building.name}
-                        onClick={() => handleBuildingClick(building.name)}
-                        className={`building-item 
-                            ${selectedBuilding === building.name ? 'selected' : ''} 
-                            ${connectedBuildings?.includes(building.name) ? 'connected' : ''}
-                            ${draggedBuilding && draggedBuilding.name === building.name ? 'dragging' : ''}
-                            ${dragOverBuilding && dragOverBuilding.name === building.name ? 'drag-over' : ''}`}
-                        draggable="true"
-                        onDragStart={(e) => handleDragStart(e, building)}
-                        onDragEnd={handleDragEnd}
-                        onDragOver={(e) => handleDragOver(e, building)}
-                        onDragLeave={handleDragLeave}
-                        onDrop={(e) => handleDrop(e, building)}
-                    >
-                        {building.name}
+            <div 
+                className="building-grid-container" 
+                ref={gridContainerRef}
+                onDragOver={handleContainerDragOver}
+                onDragEnd={handleDragEnd} // Add drag end handler to container too
+            >
+                {/* Left edge indicator */}
+                {showLeftIndicator && (
+                    <div className="edge-indicator left-edge">
+                        <div className="arrow left-arrow"></div>
+                        <span>Previous Page</span>
                     </div>
-                ))}
+                )}
+                
+                <div className="building-grid">
+                    {getCurrentBuildings().map((building) => (
+                        <div
+                            key={building.name}
+                            onClick={() => handleBuildingClick(building.name)}
+                            className={`building-item 
+                                ${selectedBuilding === building.name ? 'selected' : ''} 
+                                ${connectedBuildings?.includes(building.name) ? 'connected' : ''}
+                                ${draggedBuilding && draggedBuilding.name === building.name ? 'dragging' : ''}
+                                ${dragOverBuilding && dragOverBuilding.name === building.name ? 'drag-over' : ''}`}
+                            draggable="true"
+                            onDragStart={(e) => handleDragStart(e, building)}
+                            onDragEnd={handleDragEnd}
+                            onDragOver={(e) => handleBuildingDragOver(e, building)}
+                            onDragLeave={handleDragLeave}
+                            onDrop={(e) => handleDrop(e, building)}
+                        >
+                            {building.name}
+                        </div>
+                    ))}
+                </div>
+                
+                {/* Right edge indicator */}
+                {showRightIndicator && (
+                    <div className="edge-indicator right-edge">
+                        <div className="arrow right-arrow"></div>
+                        <span>Next Page</span>
+                    </div>
+                )}
             </div>
 
             <div className='add-remove-container'>
@@ -203,7 +331,6 @@ const BuildingGrid = ({ connectedBuildings, onBuildingSelect, onCableSelect, onC
                         try {
                             const result = await Store.getState().updateBuilding(formData);
                             if (result.success) {
-                                // Update the selected building in the parent component
                                 onBuildingSelect(formData.name);
                             }
                             return result;

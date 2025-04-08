@@ -54,11 +54,14 @@ def get_network():
 def add_building():
     data = request.json
     query = """
-        CREATE (b:Building {name: $name})
+        CREATE (b:Building {name: $name, display_order: $display_order})
         RETURN b
     """
     try:
-        db.cypher_query(query, {'name': data['name']})
+        db.cypher_query(query, {
+            'name': data['name'],
+            'display_order': data['display_order']
+            })
         return jsonify({"message": "Building added successfully"})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -282,6 +285,3 @@ def update_building_order():
     
 if __name__ == "__main__":
     app.run(debug=True, port=5001)
-
-
-

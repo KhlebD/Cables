@@ -62,35 +62,40 @@ const Store = create((set, get) => ({
     // Add new building
     addBuilding: async (name) => {
         try {
+            // Find the highest current order
+            let maxOrder = -1;
+            get().buildings.forEach(building => {
+                if (building.order !== undefined && building.order > maxOrder) {
+                    maxOrder = building.order;
+                }
+            });
+            
+            // Set the new building's order
+            const newOrder = maxOrder + 1;
+            
+            // Send both the name and order to the backend
             const response = await fetch('http://localhost:5001/buildings/add', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name })
+                body: JSON.stringify({ 
+                    name,
+                    display_order: newOrder
+                })
             });
-
+    
             if (!response.ok) {
                 return { success: false };
             }
-
-            set((state) => {
-                // Find the highest current order
-                let maxOrder = -1;
-                state.buildings.forEach(building => {
-                    if (building.order !== undefined && building.order > maxOrder) {
-                        maxOrder = building.order;
-                    }
-                });
-
-                // Add the new building with order = maxOrder + 1
-                return {
-                    buildings: [...state.buildings, {
-                        name,
-                        cabinets: [],
-                        order: maxOrder + 1
-                    }]
-                };
-            });
-
+    
+            // Update the local store
+            set((state) => ({
+                buildings: [...state.buildings, { 
+                    name, 
+                    cabinets: [],
+                    order: newOrder 
+                }]
+            }));
+    
             return { success: true };
         } catch (error) {
             console.error('Error adding building:', error);
