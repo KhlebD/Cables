@@ -20,11 +20,11 @@ function AddButton({ itemType, fields, onAdd }) {
 
     // Handle clicks outside the form
     useEffect(() => {
-        const handleClickOutside = (event) => {
+        const handleClickOutside = (e) => {
             // If the form is open and the click is outside both the form and the button
             if (isPopupOpen && formRef.current && buttonRef.current && 
-                !formRef.current.contains(event.target) && 
-                !buttonRef.current.contains(event.target)) {
+                !formRef.current.contains(e.target) && 
+                !buttonRef.current.contains(e.target)) {
                 setIsPopupOpen(false);
             }
         };

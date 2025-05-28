@@ -333,11 +333,8 @@ const Store = create((set, get) => ({
         }
     },
 
-    updateBuilding: async (formData) => {
+    updateBuilding: async (oldName, newName) => {
         const previousState = get().buildings;
-        const oldName = formData.oldName;
-        const newName = formData.name;
-
         // Optimistic update
         set((state) => ({
             buildings: state.buildings.map(building =>

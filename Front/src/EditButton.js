@@ -8,7 +8,6 @@ function EditButton({ itemType, fields, onUpdate, itemData }) {
     const [success, setSuccess] = useState('');
     const formRef = useRef(null);
     const buttonRef = useRef(null);
-    const containerRef = useRef(null);
 
     // Initialize form data when component mounts or itemData changes
     useEffect(() => {
@@ -23,7 +22,6 @@ function EditButton({ itemType, fields, onUpdate, itemData }) {
             setError('');
             setSuccess('');
             setFormData({});
-            
         }
     }, [isPopupOpen]);
 
@@ -89,7 +87,7 @@ function EditButton({ itemType, fields, onUpdate, itemData }) {
     };
 
     return (
-        <div className="add-building-container" ref={containerRef}>
+        <div className="add-building-container">
             <button 
                 ref={buttonRef}
                 className="edit-button"

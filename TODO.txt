@@ -1,0 +1,2 @@
+1. Cabinet and panel distinction
+2. Panel visualization
