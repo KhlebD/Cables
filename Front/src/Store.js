@@ -18,7 +18,7 @@ const Store = create((set, get) => ({
 
     updateBuildingOrder: async (newOrder) => {
         const previousState = get().buildings;
-        
+
         // Optimistic update - immediately update the UI
         set((state) => {
             // Create a map of building orders
@@ -26,16 +26,16 @@ const Store = create((set, get) => ({
             newOrder.forEach(item => {
                 orderMap[item.name] = item.order;
             });
-            
+
             // Update the buildings array with the new order
             const updatedBuildings = state.buildings.map(building => ({
                 ...building,
                 order: orderMap[building.name] !== undefined ? orderMap[building.name] : building.order
             }));
-            
+
             return { buildings: updatedBuildings };
         });
-        
+
         try {
             // Send the update to the backend
             const response = await fetch('http://localhost:5001/buildings/update-order', {
@@ -43,13 +43,13 @@ const Store = create((set, get) => ({
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(newOrder)
             });
-    
+
             if (!response.ok) {
                 // Revert to previous state if the update failed
                 set({ buildings: previousState });
                 return { success: false };
             }
-    
+
             return { success: true };
         } catch (error) {
             // Revert to previous state if there was an error
@@ -69,77 +69,94 @@ const Store = create((set, get) => ({
                     maxOrder = building.order;
                 }
             });
-            
+
             // Set the new building's order
             const newOrder = maxOrder + 1;
-            
+
             // Send both the name and order to the backend
             const response = await fetch('http://localhost:5001/buildings/add', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
+                body: JSON.stringify({
                     name,
                     display_order: newOrder
                 })
             });
-    
+
             if (!response.ok) {
                 return { success: false };
             }
-    
+
             // Update the local store
             set((state) => ({
-                buildings: [...state.buildings, { 
-                    name, 
+                buildings: [...state.buildings, {
+                    name,
                     cabinets: [],
-                    order: newOrder 
+                    order: newOrder
                 }]
             }));
-    
+
             return { success: true };
         } catch (error) {
             console.error('Error adding building:', error);
             throw error;
         }
     },
+    addCabinet: async (buildingName, identifier, cabinetType, parentCabinet = null) => {
+        const previousState = get().buildings;
 
-    addCabinet: async (building_name, identifier, cabinet_type) => {
+        // Optimistic update
+        set((state) => ({
+            buildings: state.buildings.map(building =>
+                building.name === buildingName
+                    ? {
+                        ...building,
+                        cabinets: [
+                            ...(building.cabinets || []),
+                            {
+                                identifier,
+                                cabinet_type: cabinetType,
+                                parent_cabinet: parentCabinet,
+                                cables: []
+                            }
+                        ]
+                    }
+                    : building
+            )
+        }));
+
         try {
+            const requestBody = {
+                identifier,
+                cabinet_type: cabinetType,
+                building_name: buildingName
+            };
+
+            // Only include parent_cabinet if it's not null
+            if (parentCabinet !== null) {
+                requestBody.parent_cabinet = parentCabinet;
+            }
+
             const response = await fetch('http://localhost:5001/cabinets/add', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    building_name: building_name,
-                    identifier: identifier,
-                    cabinet_type: cabinet_type
-                })
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestBody)
             });
 
             if (!response.ok) {
+                set({ buildings: previousState });
                 return { success: false };
             }
 
-            set((state) => ({
-                buildings: state.buildings.map(building =>
-                    building.name === building_name
-                        ? {
-                            ...building,
-                            cabinets: [...(building.cabinets || []), {
-                                identifier,
-                                cabinet_type,
-                                cables: []
-                            }]
-                        }
-                        : building
-                )
-            }));
-
-            // Refresh
+            await get().fetchNetwork();
             return { success: true };
 
         } catch (error) {
+            set({ buildings: previousState });
             console.error('Error adding cabinet:', error);
-            throw error;
+            return { success: false, error: error.message };
         }
     },
 
@@ -227,15 +244,19 @@ const Store = create((set, get) => ({
     removeCabinet: async (cabinetID) => {
         const previousState = get().buildings;
 
-        // Optimistic update
+        // Optimistic update - remove cabinet and all its children
         set((state) => ({
             buildings: state.buildings.map(building => ({
                 ...building,
-                cabinets: building.cabinets?.filter(cab => cab.identifier !== cabinetID) || []
+                cabinets: building.cabinets?.filter(cab =>
+                    cab.identifier !== cabinetID && cab.parent_cabinet !== cabinetID
+                ) || []
             }))
         }));
+
         try {
-            const response = await fetch(`http://localhost:5001/cabinets/remove/${cabinetID}`, {
+            const encodedCabinetID = encodeURIComponent(cabinetID);
+            const response = await fetch(`http://localhost:5001/cabinets/remove/${encodedCabinetID}`, {
                 method: 'DELETE'
             });
 
@@ -248,7 +269,7 @@ const Store = create((set, get) => ({
 
         } catch (error) {
             set({ buildings: previousState });
-            console.error('Error removing cable:', error);
+            console.error('Error removing cabinet:', error);
             return { success: false, error: error.message };
         }
     },
@@ -369,52 +390,59 @@ const Store = create((set, get) => ({
     // Update cabinet
     updateCabinet: async (formData) => {
         const previousState = get().buildings;
-        const oldIdentifier = formData.oldIdentifier;
-        const newIdentifier = formData.identifier;
-        const newCabinetType = formData.cabinet_type;
-        const building_name = formData.building_name;
 
-        // Optimistic update - update the UI immediately
+        // Optimistic update
         set((state) => ({
             buildings: state.buildings.map(building =>
-                building.name === building_name
+                building.name === formData.building_name
                     ? {
                         ...building,
                         cabinets: building.cabinets?.map(cabinet =>
-                            cabinet.identifier === oldIdentifier
-                                ? { ...cabinet, identifier: newIdentifier, cabinet_type: newCabinetType }
+                            cabinet.identifier === formData.oldIdentifier
+                                ? {
+                                    ...cabinet,
+                                    identifier: formData.identifier,
+                                    cabinet_type: formData.cabinet_type,
+                                    parent_cabinet: formData.parent_cabinet
+                                }
                                 : cabinet
-                        )
+                        ) || []
                     }
                     : building
             )
         }));
 
         try {
+            const requestBody = {
+                new_identifier: formData.identifier,
+                cabinet_type: formData.cabinet_type,
+                building_name: formData.building_name,
+                old_identifier: formData.oldIdentifier,
+                parent_cabinet: formData.parent_cabinet
+            };
+
             const response = await fetch('http://localhost:5001/cabinets/update', {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    oldIdentifier,
-                    newIdentifier,
-                    newCabinetType
-                })
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestBody)
             });
 
             if (!response.ok) {
-                // Revert to previous state if the update failed
                 set({ buildings: previousState });
                 return { success: false };
             }
 
+            await get().fetchNetwork();
             return { success: true };
+
         } catch (error) {
-            // Revert to previous state if there was an error
             set({ buildings: previousState });
             console.error('Error updating cabinet:', error);
-            throw error;
+            return { success: false, error: error.message };
         }
-    }
+    },
 }));
 
 

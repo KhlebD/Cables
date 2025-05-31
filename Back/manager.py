@@ -37,7 +37,9 @@ def init_db():
         identifier TEXT UNIQUE NOT NULL,
         cabinet_type TEXT NOT NULL,
         building_id INTEGER NOT NULL,
-        FOREIGN KEY (building_id) REFERENCES buildings (id) ON DELETE CASCADE
+        parent_cabinet TEXT NULL,
+        FOREIGN KEY (building_id) REFERENCES buildings (id) ON DELETE CASCADE,
+        FOREIGN KEY (parent_cabinet) REFERENCES cabinets(identifier) ON UPDATE CASCADE ON DELETE CASCADE
     )
     ''')
     
@@ -69,6 +71,14 @@ def init_db():
     )
     ''')
     
+    # Add parent_cabinet column if it doesn't exist (for existing databases)
+    try:
+        cursor.execute('ALTER TABLE cabinets ADD COLUMN parent_cabinet TEXT NULL')
+        cursor.execute('ALTER TABLE cabinets ADD CONSTRAINT fk_parent_cabinet FOREIGN KEY (parent_cabinet) REFERENCES cabinets(identifier) ON UPDATE CASCADE ON DELETE CASCADE')
+    except psycopg2.Error:
+        # Column already exists, rollback and continue
+        conn.rollback()
+    
     conn.commit()
     conn.close()
 
@@ -96,9 +106,9 @@ def get_network():
                 "cabinets": []
             }
             
-            # Get cabinets for this building
+            # Get cabinets for this building (including parent_cabinet field)
             cursor.execute('''
-            SELECT id, identifier, cabinet_type FROM cabinets 
+            SELECT id, identifier, cabinet_type, parent_cabinet FROM cabinets 
             WHERE building_id = %s
             ''', (building["id"],))
             cabinets_data = cursor.fetchall()
@@ -108,6 +118,7 @@ def get_network():
                 cabinet_info = {
                     "identifier": cabinet["identifier"],
                     "cabinet_type": cabinet["cabinet_type"],
+                    "parent_cabinet": cabinet["parent_cabinet"],
                     "cables": []
                 }
                 
@@ -202,6 +213,8 @@ def add_cabinet():
     if not data or 'building_name' not in data or 'identifier' not in data or 'cabinet_type' not in data:
         return jsonify({'error': 'Invalid data'}), 400
         
+    parent_cabinet = data.get('parent_cabinet')
+    
     conn = get_db_connection()
     cursor = conn.cursor()
     
@@ -219,10 +232,20 @@ def add_cabinet():
             
         building_id = building[0]
         
+        # Check if parent_cabinet exists (if provided)
+        if parent_cabinet:
+            cursor.execute(
+                'SELECT identifier FROM cabinets WHERE identifier = %s AND building_id = %s',
+                (parent_cabinet, building_id)
+            )
+            if not cursor.fetchone():
+                conn.close()
+                return jsonify({'error': 'Parent cabinet does not exist'}), 400
+        
         # Add cabinet
         cursor.execute(
-            'INSERT INTO cabinets (identifier, cabinet_type, building_id) VALUES (%s, %s, %s)',
-            (data['identifier'], data['cabinet_type'], building_id)
+            'INSERT INTO cabinets (identifier, cabinet_type, building_id, parent_cabinet) VALUES (%s, %s, %s, %s)',
+            (data['identifier'], data['cabinet_type'], building_id, parent_cabinet)
         )
         
         conn.commit()
@@ -230,6 +253,12 @@ def add_cabinet():
         
         return jsonify({"message": "Cabinet added successfully"}), 200
         
+    except psycopg2.IntegrityError as e:
+        conn.rollback()
+        conn.close()
+        if 'unique constraint' in str(e).lower():
+            return jsonify({'error': 'Cabinet with this identifier already exists'}), 409
+        return jsonify({'error': 'Database integrity error'}), 400
     except Exception as e:
         conn.rollback()
         conn.close()
@@ -294,21 +323,38 @@ def remove_building(building_name):
         conn.close()
         return jsonify({'error': str(e)}), 500
 
-@app.route('/cabinets/remove/<cabinet_id>', methods=['DELETE'])
+@app.route('/cabinets/remove/<path:cabinet_id>', methods=['DELETE'])
 def remove_cabinet(cabinet_id):
     conn = get_db_connection()
     cursor = conn.cursor()
     
     try:
-        cursor.execute(
-            'DELETE FROM cabinets WHERE identifier = %s',
-            (cabinet_id,)
-        )
+        # First, remove all cables associated with this cabinet and its children
+        cursor.execute('''
+            DELETE FROM cables 
+            WHERE cabinet1 = %s OR cabinet2 = %s
+            OR cabinet1 IN (
+                SELECT identifier FROM cabinets WHERE parent_cabinet = %s
+            )
+            OR cabinet2 IN (
+                SELECT identifier FROM cabinets WHERE parent_cabinet = %s
+            )
+        ''', (cabinet_id, cabinet_id, cabinet_id, cabinet_id))
+        
+        # Remove all child cabinets (panels) first
+        cursor.execute('''
+            DELETE FROM cabinets WHERE parent_cabinet = %s
+        ''', (cabinet_id,))
+        
+        # Then remove the main cabinet
+        cursor.execute('''
+            DELETE FROM cabinets WHERE identifier = %s
+        ''', (cabinet_id,))
         
         conn.commit()
         conn.close()
         
-        return jsonify({"message": "Cabinet and all connected elements removed successfully"}), 200
+        return jsonify({"message": "Cabinet and all related items removed successfully"}), 200
         
     except Exception as e:
         conn.rollback()
@@ -375,35 +421,84 @@ def update_building():
 def update_cabinet():
     data = request.get_json()
     
-    if not data or 'oldIdentifier' not in data or 'newIdentifier' not in data or 'cabinet_type' not in data:
+    if not data or 'old_identifier' not in data or 'new_identifier' not in data or 'cabinet_type' not in data:
         return jsonify({'error': 'Invalid data'}), 400
         
-    old_identifier = data['oldIdentifier']
-    new_identifier = data['newIdentifier']
+    old_identifier = data['old_identifier']
+    new_identifier = data['new_identifier']
     cabinet_type = data['cabinet_type']
+    building_name = data['building_name']
+    parent_cabinet = data.get('parent_cabinet')
+    
+    # Prevent circular reference
+    if parent_cabinet == new_identifier:
+        return jsonify({'error': 'Cabinet cannot be parent of itself'}), 400
     
     conn = get_db_connection()
     cursor = conn.cursor()
     
     try:
-        # Update the cabinet
+        # Get building id
         cursor.execute(
-            'UPDATE cabinets SET identifier = %s, cabinet_type = %s WHERE identifier = %s',
-            (new_identifier, cabinet_type, old_identifier)
+            'SELECT id FROM buildings WHERE name = %s',
+            (building_name,)
         )
+        building = cursor.fetchone()
         
-        if cursor.rowcount == 0:
-            conn.rollback()
+        if not building:
+            conn.close()
+            return jsonify({'error': 'Building not found'}), 404
+            
+        building_id = building[0]
+        
+        # Check if the old cabinet exists
+        cursor.execute(
+            'SELECT identifier FROM cabinets WHERE identifier = %s AND building_id = %s',
+            (old_identifier, building_id)
+        )
+        if not cursor.fetchone():
             conn.close()
             return jsonify({'error': 'Cabinet not found'}), 404
         
-        # No need to update cables - ON UPDATE CASCADE handles this
+        # Check if parent_cabinet exists (if provided)
+        if parent_cabinet:
+            cursor.execute(
+                'SELECT identifier FROM cabinets WHERE identifier = %s AND building_id = %s',
+                (parent_cabinet, building_id)
+            )
+            if not cursor.fetchone():
+                conn.close()
+                return jsonify({'error': 'Parent cabinet does not exist'}), 400
+        
+        # Update the cabinet
+        cursor.execute('''
+            UPDATE cabinets 
+            SET identifier = %s, cabinet_type = %s, parent_cabinet = %s
+            WHERE identifier = %s AND building_id = %s
+        ''', (new_identifier, cabinet_type, parent_cabinet, old_identifier, building_id))
+        
+        # Update any children that reference this cabinet as parent
+        if old_identifier != new_identifier:
+            cursor.execute('''
+                UPDATE cabinets 
+                SET parent_cabinet = %s 
+                WHERE parent_cabinet = %s AND building_id = %s
+            ''', (new_identifier, old_identifier, building_id))
+        
+        # Update any cables that reference this cabinet (ON UPDATE CASCADE should handle this, but being explicit)
+        # The foreign key constraints should handle this automatically
         
         conn.commit()
         conn.close()
         
         return jsonify({'success': True}), 200
         
+    except psycopg2.IntegrityError as e:
+        conn.rollback()
+        conn.close()
+        if 'unique constraint' in str(e).lower():
+            return jsonify({'error': 'Cabinet with this identifier already exists'}), 409
+        return jsonify({'error': 'Database integrity error'}), 400
     except Exception as e:
         conn.rollback()
         conn.close()

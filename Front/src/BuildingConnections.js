@@ -13,6 +13,36 @@ function BuildingConnections({ onBuildingSelect, onCableSelect, selectedConnectB
     const selectedBuilding = buildings?.find(b => b.name === selectedConnectBuilding);
     const nodeRef = useRef(null);
 
+    // Function to group cabinets by parent-child relationships
+    const groupCabinets = (cabinets) => {
+        if (!cabinets) return { parentCabinets: [], standaloneCabinets: [] };
+
+        const parentCabinets = [];
+        const standaloneCabinets = [];
+        const panelCabinets = [];
+
+        // First pass: separate parents, panels, and standalone
+        cabinets.filter(cabinet => cabinet.identifier != null).forEach(cabinet => {
+            if (cabinet.parent_cabinet) {
+                // This is a panel (child cabinet)
+                panelCabinets.push(cabinet);
+            } else {
+                // Check if this cabinet has children
+                const hasChildren = cabinets.some(c => c.parent_cabinet === cabinet.identifier);
+                if (hasChildren) {
+                    parentCabinets.push({
+                        ...cabinet,
+                        panels: cabinets.filter(c => c.parent_cabinet === cabinet.identifier)
+                    });
+                } else {
+                    standaloneCabinets.push(cabinet);
+                }
+            }
+        });
+
+        return { parentCabinets, standaloneCabinets };
+    };
+
     const findConnections = (sourceId, isBuilding = true) => {
         if (!sourceId)
             return [];
@@ -38,7 +68,6 @@ function BuildingConnections({ onBuildingSelect, onCableSelect, selectedConnectB
                                         connectedSet.add(otherBuilding.name);
                                     }
                                 } else {
-
                                     if (cabinet.identifier === sourceId.identifier) {
                                         connectedSet.add(otherCabinet.identifier);
                                     }
@@ -50,17 +79,13 @@ function BuildingConnections({ onBuildingSelect, onCableSelect, selectedConnectB
             });
         });
 
-
         return Array.from(connectedSet);
     };
 
-
     const connectedBuildings = useMemo(() => {
-        // If a cabinet is selected, show buildings connected to that cabinet
         if (filterByCabinet) {
             return findConnections(filterByCabinet, false)
                 .map(cabinetId => {
-                    // Find which building each connected cabinet belongs to
                     let buildingName;
                     buildings?.forEach(building => {
                         building.cabinets?.forEach(cabinet => {
@@ -71,10 +96,9 @@ function BuildingConnections({ onBuildingSelect, onCableSelect, selectedConnectB
                     });
                     return buildingName;
                 })
-                .filter(Boolean); // Remove any undefined values
+                .filter(Boolean);
         }
 
-        // Otherwise, show buildings connected to the selected building
         return findConnections(filterBy, true);
     }, [filterByCabinet, filterBy, buildings]);
 
@@ -92,8 +116,17 @@ function BuildingConnections({ onBuildingSelect, onCableSelect, selectedConnectB
             onCabinetSelect(cabinet);
     }
 
-    return (
+    // Get available parent cabinets for the dropdown
+    const availableParentCabinets = useMemo(() => {
+        if (!selectedBuilding?.cabinets) return [];
+        return selectedBuilding.cabinets
+            .filter(cabinet => !cabinet.parent_cabinet) // Only non-panel cabinets can be parents
+            .map(cabinet => cabinet.identifier);
+    }, [selectedBuilding]);
 
+    const { parentCabinets, standaloneCabinets } = groupCabinets(selectedBuilding?.cabinets);
+
+    return (
         <div className="connected-view">
             {/* Connected Buildings Section */}
             <div className="connected-buildings">
@@ -110,26 +143,62 @@ function BuildingConnections({ onBuildingSelect, onCableSelect, selectedConnectB
 
             {/* Cabinets Section */}
             <CSSTransition
-                in={ Boolean(selectedConnectBuilding) }
+                in={Boolean(selectedConnectBuilding)}
                 timeout={300}
                 classNames="section"
                 unmountOnExit
                 appear
                 nodeRef={nodeRef}
             >
-                <div  ref={nodeRef} className="section">
+                <div ref={nodeRef} className="section">
                     <div className="section-header">
                         <h3>ארונות</h3>
-
                     </div>
 
-                    <div className="cabinets-list">
-                        {selectedBuilding?.cabinets?.filter(cabinet => (cabinet.identifier != null)).map(cabinet => (
-                            <div
+                    <div className="cabinets-container">
+                        {/* Render parent cabinets with their panels */}
+                        {parentCabinets.map(cabinet => (
+                            <div key={cabinet.identifier} className="cabinet-group">
+                                <div 
+                                    className={`main-cabinet 
+                                        ${selectedCabinet?.identifier === cabinet.identifier ? 'selected' : ''} 
+                                        ${connectedCabinets.includes(cabinet.identifier) ? 'connected' : ''}`}
+                                    onClick={() => handleCabinetClick(cabinet)}
+                                >
+                                    <div className="cabinet-header">
+                                        <span className="identifier">{cabinet.identifier}</span>
+                                        <span className="cabinet-type">{cabinet.cabinet_type}</span>
+                                    </div>
+                                    
+                                    {/* Panels inside the cabinet */}
+                                    <div className="panels-grid">
+                                        {cabinet.panels.map(panel => (
+                                            <div 
+                                                key={panel.identifier}
+                                                className={`panel-item 
+                                                    ${selectedCabinet?.identifier === panel.identifier ? 'selected' : ''} 
+                                                    ${connectedCabinets.includes(panel.identifier) ? 'connected' : ''}`}
+                                                onClick={(e) => {
+                                                    e.stopPropagation(); // Prevent parent cabinet click
+                                                    handleCabinetClick(panel);
+                                                }}
+                                            >
+                                                <div className="panel-identifier">{panel.identifier}</div>
+                                                <div className="panel-type">{panel.cabinet_type}</div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+
+                        {/* Render standalone cabinets */}
+                        {standaloneCabinets.map(cabinet => (
+                            <div 
                                 key={cabinet.identifier}
-                                className={`cabinet-item 
-                                ${selectedCabinet?.identifier === cabinet.identifier ? 'selected' : ''} 
-                                ${connectedCabinets.includes(cabinet.identifier) ? 'connected' : ''}`}
+                                className={`standalone-cabinet 
+                                    ${selectedCabinet?.identifier === cabinet.identifier ? 'selected' : ''} 
+                                    ${connectedCabinets.includes(cabinet.identifier) ? 'connected' : ''}`}
                                 onClick={() => handleCabinetClick(cabinet)}
                             >
                                 <div className="identifier">{cabinet.identifier}</div>
@@ -137,6 +206,7 @@ function BuildingConnections({ onBuildingSelect, onCableSelect, selectedConnectB
                             </div>
                         ))}
                     </div>
+
                     <div className='add-remove-container'>
                         <AddButton
                             itemType="ארון"
@@ -153,75 +223,100 @@ function BuildingConnections({ onBuildingSelect, onCableSelect, selectedConnectB
                                     label: 'סוג',
                                     type: 'select',
                                     required: true,
-                                    options: ['ארון', 'חפרפר', 'באקבון']
+                                    options: ['ארון', 'חפרפר', 'באקבון', 'פאנל']
+                                },
+                                {
+                                    name: 'parent_cabinet',
+                                    label: 'שייך לארון (אופציונלי)',
+                                    type: 'select',
+                                    required: false,
+                                    options: ['ללא', ...availableParentCabinets]
                                 }
                             ]}
                             onAdd={async (formData) => {
+                                const parentCabinet = formData.parent_cabinet === 'ללא' ? null : formData.parent_cabinet;
                                 await Store.getState().addCabinet(
                                     selectedConnectBuilding,
                                     formData.identifier,
-                                    formData.cabinet_type
+                                    formData.cabinet_type,
+                                    parentCabinet
                                 );
                             }}
                         />
-                        {selectedCabinet && (<RemoveButton
-                            itemType="ארון"
-                            onRemove={async () => {
-                                const tempSelectedCabinetID= selectedCabinet.identifier;
-                                onCabinetSelect(null);
-                                await Store.getState().removeCabinet(tempSelectedCabinetID);
-                            }}
-                        />)}
-                        {selectedCabinet && (<EditButton
-                            itemType="ארון"
-                            fields={[
-                                {
-                                    name: 'identifier',
-                                    label: 'מזהה ארון',
-                                    type: 'text',
-                                    required: true,
-                                    placeholder: 'הכנס מזהה ארון'
-                                },
-                                {
-                                    name: 'cabinet_type',
-                                    label: 'סוג',
-                                    type: 'select',
-                                    required: true,
-                                    options: ['ארון', 'חפרפר', 'באקבון']
-                                },
-                                {
-                                    name: 'building_name',
-                                    label: 'בניין',
-                                    type: 'text',
-                                    required: true,
-                                    readOnly: true
-                                }
-                            ]}
-                            itemData={{
-                                identifier: selectedCabinet.identifier,
-                                cabinet_type: selectedCabinet.cabinet_type,
-                                building_name: selectedConnectBuilding,
-                                oldIdentifier: selectedCabinet.identifier
-                            }}
-                            onUpdate={async (formData) => {
-                                try {
-                                    const result = await Store.getState().updateCabinet(formData);
-                                    if (result.success) {
-                                        // Update the selected cabinet in the parent component
-                                        const updatedCabinet = {
-                                            ...selectedCabinet,
-                                            identifier: formData.identifier,
-                                            cabinet_type: formData.cabinet_type
-                                        };
-                                        onCabinetSelect(updatedCabinet);
+                        {selectedCabinet && (
+                            <RemoveButton
+                                itemType="ארון"
+                                onRemove={async () => {
+                                    const tempSelectedCabinetID = selectedCabinet.identifier;
+                                    onCabinetSelect(null);
+                                    await Store.getState().removeCabinet(tempSelectedCabinetID);
+                                }}
+                            />
+                        )}
+                        {selectedCabinet && (
+                            <EditButton
+                                itemType="ארון"
+                                fields={[
+                                    {
+                                        name: 'identifier',
+                                        label: 'מזהה ארון',
+                                        type: 'text',
+                                        required: true,
+                                        placeholder: 'הכנס מזהה ארון'
+                                    },
+                                    {
+                                        name: 'cabinet_type',
+                                        label: 'סוג',
+                                        type: 'select',
+                                        required: true,
+                                        options: ['ארון', 'חפרפר', 'באקבון', 'פאנל']
+                                    },
+                                    {
+                                        name: 'parent_cabinet',
+                                        label: 'שייך לארון (אופציונלי)',
+                                        type: 'select',
+                                        required: false,
+                                        options: ['ללא', ...availableParentCabinets.filter(id => id !== selectedCabinet.identifier)]
+                                    },
+                                    {
+                                        name: 'building_name',
+                                        label: 'בניין',
+                                        type: 'text',
+                                        required: true,
+                                        readOnly: true
                                     }
-                                    return result;
-                                } catch (error) {
-                                    console.error("Error updating cabinet:", error);
-                                    return { success: false, error: error.message };
-                                }
-                            }}
-                        />)}
+                                ]}
+                                itemData={{
+                                    identifier: selectedCabinet.identifier,
+                                    cabinet_type: selectedCabinet.cabinet_type,
+                                    parent_cabinet: selectedCabinet.parent_cabinet || 'ללא',
+                                    building_name: selectedConnectBuilding,
+                                    oldIdentifier: selectedCabinet.identifier
+                                }}
+                                onUpdate={async (formData) => {
+                                    try {
+                                        const parentCabinet = formData.parent_cabinet === 'ללא' ? null : formData.parent_cabinet;
+                                        const result = await Store.getState().updateCabinet({
+                                            ...formData,
+                                            parent_cabinet: parentCabinet
+                                        });
+                                        if (result.success) {
+                                            const updatedCabinet = {
+                                                ...selectedCabinet,
+                                                identifier: formData.identifier,
+                                                cabinet_type: formData.cabinet_type,
+                                                parent_cabinet: parentCabinet
+                                            };
+                                            onCabinetSelect(updatedCabinet);
+                                        }
+                                        return result;
+                                    } catch (error) {
+                                        console.error("Error updating cabinet:", error);
+                                        return { success: false, error: error.message };
+                                    }
+                                }}
+                            />
+                        )}
                     </div>
                 </div>
             </CSSTransition>
