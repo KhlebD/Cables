@@ -102,7 +102,7 @@ const Store = create((set, get) => ({
             throw error;
         }
     },
-    addCabinet: async (buildingName, identifier, cabinetType, parentCabinet = null) => {
+    addCabinet: async (buildingName, identifier, cabinetType, parentCabinet = null, portCount = null) => {
         const previousState = get().buildings;
 
         // Optimistic update
@@ -117,6 +117,7 @@ const Store = create((set, get) => ({
                                 identifier,
                                 cabinet_type: cabinetType,
                                 parent_cabinet: parentCabinet,
+                                ports: [],
                                 cables: []
                             }
                         ]
@@ -132,9 +133,15 @@ const Store = create((set, get) => ({
                 building_name: buildingName
             };
 
-            // Only include parent_cabinet if it's not null
+            // Only include parent_cabinet if not null
             if (parentCabinet !== null) {
                 requestBody.parent_cabinet = parentCabinet;
+            }
+
+            // Include port_count if not null
+            console.log(portCount);
+            if (portCount !== null && portCount !== undefined) {
+                requestBody.port_count = portCount;
             }
 
             const response = await fetch('http://localhost:5001/cabinets/add', {
@@ -403,7 +410,8 @@ const Store = create((set, get) => ({
                                     ...cabinet,
                                     identifier: formData.identifier,
                                     cabinet_type: formData.cabinet_type,
-                                    parent_cabinet: formData.parent_cabinet
+                                    parent_cabinet: formData.parent_cabinet,
+                                    port_count: formData.port_count
                                 }
                                 : cabinet
                         ) || []
@@ -411,16 +419,17 @@ const Store = create((set, get) => ({
                     : building
             )
         }));
-
+        
         try {
             const requestBody = {
                 new_identifier: formData.identifier,
                 cabinet_type: formData.cabinet_type,
                 building_name: formData.building_name,
                 old_identifier: formData.oldIdentifier,
-                parent_cabinet: formData.parent_cabinet
+                parent_cabinet: formData.parent_cabinet,
+                port_count: formData.port_count
             };
-
+            console.log(requestBody);
             const response = await fetch('http://localhost:5001/cabinets/update', {
                 method: 'PUT',
                 headers: {

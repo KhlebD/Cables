@@ -109,7 +109,6 @@ function BuildingConnections({ onBuildingSelect, onCableSelect, selectedConnectB
 
     const handleCabinetClick = (cabinet) => {
         if (cabinet?.identifier === selectedCabinet?.identifier) {
-            console.log(cabinet?.identifier, selectedCabinet?.identifier);
             onCabinetSelect(null);
         }
         else
@@ -159,7 +158,7 @@ function BuildingConnections({ onBuildingSelect, onCableSelect, selectedConnectB
                         {/* Render parent cabinets with their panels */}
                         {parentCabinets.map(cabinet => (
                             <div key={cabinet.identifier} className="cabinet-group">
-                                <div 
+                                <div
                                     className={`main-cabinet 
                                         ${selectedCabinet?.identifier === cabinet.identifier ? 'selected' : ''} 
                                         ${connectedCabinets.includes(cabinet.identifier) ? 'connected' : ''}`}
@@ -169,11 +168,11 @@ function BuildingConnections({ onBuildingSelect, onCableSelect, selectedConnectB
                                         <span className="identifier">{cabinet.identifier}</span>
                                         <span className="cabinet-type">{cabinet.cabinet_type}</span>
                                     </div>
-                                    
+
                                     {/* Panels inside the cabinet */}
                                     <div className="panels-grid">
                                         {cabinet.panels.map(panel => (
-                                            <div 
+                                            <div
                                                 key={panel.identifier}
                                                 className={`panel-item 
                                                     ${selectedCabinet?.identifier === panel.identifier ? 'selected' : ''} 
@@ -185,6 +184,7 @@ function BuildingConnections({ onBuildingSelect, onCableSelect, selectedConnectB
                                             >
                                                 <div className="panel-identifier">{panel.identifier}</div>
                                                 <div className="panel-type">{panel.cabinet_type}</div>
+                                                <div className="panel-type">{panel.port_count}</div>
                                             </div>
                                         ))}
                                     </div>
@@ -194,7 +194,7 @@ function BuildingConnections({ onBuildingSelect, onCableSelect, selectedConnectB
 
                         {/* Render standalone cabinets */}
                         {standaloneCabinets.map(cabinet => (
-                            <div 
+                            <div
                                 key={cabinet.identifier}
                                 className={`standalone-cabinet 
                                     ${selectedCabinet?.identifier === cabinet.identifier ? 'selected' : ''} 
@@ -203,6 +203,7 @@ function BuildingConnections({ onBuildingSelect, onCableSelect, selectedConnectB
                             >
                                 <div className="identifier">{cabinet.identifier}</div>
                                 <div className="cabinet-type">{cabinet.cabinet_type}</div>
+                                <div className="cabinet-type">{cabinet.port_count}</div>
                             </div>
                         ))}
                     </div>
@@ -231,6 +232,13 @@ function BuildingConnections({ onBuildingSelect, onCableSelect, selectedConnectB
                                     type: 'select',
                                     required: false,
                                     options: ['ללא', ...availableParentCabinets]
+                                },
+                                {
+                                    name: 'port_count',
+                                    label: 'מספר פורטים',
+                                    type: 'number',
+                                    required: false,
+                                    placeholder: 'מספר פורטים (0-48)'
                                 }
                             ]}
                             onAdd={async (formData) => {
@@ -239,7 +247,8 @@ function BuildingConnections({ onBuildingSelect, onCableSelect, selectedConnectB
                                     selectedConnectBuilding,
                                     formData.identifier,
                                     formData.cabinet_type,
-                                    parentCabinet
+                                    parentCabinet,
+                                    formData.port_count
                                 );
                             }}
                         />
@@ -284,6 +293,13 @@ function BuildingConnections({ onBuildingSelect, onCableSelect, selectedConnectB
                                         type: 'text',
                                         required: true,
                                         readOnly: true
+                                    },
+                                    {
+                                        name: 'port_count',
+                                        label: 'מספר פורטים',
+                                        type: 'number',
+                                        required: false,
+                                        placeholder: 'מספר פורטים (0-48)'
                                     }
                                 ]}
                                 itemData={{
@@ -291,21 +307,32 @@ function BuildingConnections({ onBuildingSelect, onCableSelect, selectedConnectB
                                     cabinet_type: selectedCabinet.cabinet_type,
                                     parent_cabinet: selectedCabinet.parent_cabinet || 'ללא',
                                     building_name: selectedConnectBuilding,
-                                    oldIdentifier: selectedCabinet.identifier
+                                    oldIdentifier: selectedCabinet.identifier,
+                                    port_count: selectedCabinet.port_count || 0
                                 }}
                                 onUpdate={async (formData) => {
                                     try {
+                                        console.log(selectedConnectBuilding);
+                                        console.log("SUCCESS");
                                         const parentCabinet = formData.parent_cabinet === 'ללא' ? null : formData.parent_cabinet;
                                         const result = await Store.getState().updateCabinet({
                                             ...formData,
-                                            parent_cabinet: parentCabinet
+                                            parent_cabinet: parentCabinet,
+                                            building_name: selectedConnectBuilding, 
+                                            oldIdentifier: selectedCabinet.identifier,
                                         });
+                                        
                                         if (result.success) {
+                                            console.log(selectedCabinet.identifier);
+                                            console.log("SUCCESS");
                                             const updatedCabinet = {
                                                 ...selectedCabinet,
+                                                building_name: selectedConnectBuilding,
+                                                oldIdentifier: selectedCabinet.identifier,
                                                 identifier: formData.identifier,
                                                 cabinet_type: formData.cabinet_type,
-                                                parent_cabinet: parentCabinet
+                                                parent_cabinet: parentCabinet,
+                                                port_count: formData.port_count || selectedCabinet.port_count || 0
                                             };
                                             onCabinetSelect(updatedCabinet);
                                         }

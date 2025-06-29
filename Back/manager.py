@@ -19,68 +19,126 @@ def get_db_connection():
 
 # Database schema initialization
 def init_db():
+    print("Starting database initialization...")
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # Create tables
-    cursor.execute('''
-    CREATE TABLE IF NOT EXISTS buildings (
-        id SERIAL PRIMARY KEY,
-        name TEXT UNIQUE NOT NULL,
-        display_order INTEGER DEFAULT 9999
-    )
-    ''')
+    try:
+        # Create all main tables
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS buildings (
+            id SERIAL PRIMARY KEY,
+            name TEXT UNIQUE NOT NULL,
+            display_order INTEGER DEFAULT 9999
+        )
+        ''')
+        
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS cabinets (
+            id SERIAL PRIMARY KEY,
+            identifier TEXT UNIQUE NOT NULL,
+            cabinet_type TEXT NOT NULL,
+            building_id INTEGER NOT NULL,
+            parent_cabinet TEXT NULL,
+            FOREIGN KEY (building_id) REFERENCES buildings (id) ON DELETE CASCADE,
+            FOREIGN KEY (parent_cabinet) REFERENCES cabinets(identifier) ON UPDATE CASCADE ON DELETE CASCADE
+        )
+        ''')
+        
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS cables (
+            id SERIAL PRIMARY KEY,
+            cableID TEXT UNIQUE NOT NULL,
+            number TEXT NOT NULL,
+            num_of_fibers INTEGER NOT NULL,
+            cable_type TEXT NOT NULL,
+            cabinet1 TEXT NOT NULL,
+            cabinet2 TEXT NOT NULL,
+            cabinet1_start INTEGER NOT NULL,
+            cabinet2_start INTEGER NOT NULL,
+            FOREIGN KEY (cabinet1) REFERENCES cabinets(identifier) ON UPDATE CASCADE ON DELETE CASCADE,
+            FOREIGN KEY (cabinet2) REFERENCES cabinets(identifier) ON UPDATE CASCADE ON DELETE CASCADE
+        )
+        ''')
+        
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS fibers (
+            id SERIAL PRIMARY KEY,
+            number_cabinet1 INTEGER NOT NULL,
+            number_cabinet2 INTEGER NOT NULL,
+            fiber_type TEXT NOT NULL DEFAULT '0',
+            network TEXT,
+            cable_id TEXT NOT NULL,
+            FOREIGN KEY (cable_id) REFERENCES cables(cableID) ON UPDATE CASCADE ON DELETE CASCADE
+        )
+        ''')
+        
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS ports (
+            id SERIAL PRIMARY KEY,
+            cabinet_id TEXT NOT NULL,
+            port_number INTEGER NOT NULL,
+            status TEXT DEFAULT 'available',
+            FOREIGN KEY (cabinet_id) REFERENCES cabinets(identifier) ON UPDATE CASCADE ON DELETE CASCADE,
+            UNIQUE(cabinet_id, port_number)
+        )
+        ''')
+        
+        # Commit main table creation
+        conn.commit()
+        
+    except Exception as e:
+        print(f"Error creating main tables: {e}")
+        conn.rollback()
+        conn.close()
+        return
     
-    cursor.execute('''
-    CREATE TABLE IF NOT EXISTS cabinets (
-        id SERIAL PRIMARY KEY,
-        identifier TEXT UNIQUE NOT NULL,
-        cabinet_type TEXT NOT NULL,
-        building_id INTEGER NOT NULL,
-        parent_cabinet TEXT NULL,
-        FOREIGN KEY (building_id) REFERENCES buildings (id) ON DELETE CASCADE,
-        FOREIGN KEY (parent_cabinet) REFERENCES cabinets(identifier) ON UPDATE CASCADE ON DELETE CASCADE
-    )
-    ''')
     
-    cursor.execute('''
-    CREATE TABLE IF NOT EXISTS cables (
-        id SERIAL PRIMARY KEY,
-        cableID TEXT UNIQUE NOT NULL,
-        number TEXT NOT NULL,
-        num_of_fibers INTEGER NOT NULL,
-        cable_type TEXT NOT NULL,
-        cabinet1 TEXT NOT NULL,
-        cabinet2 TEXT NOT NULL,
-        cabinet1_start INTEGER NOT NULL,
-        cabinet2_start INTEGER NOT NULL,
-        FOREIGN KEY (cabinet1) REFERENCES cabinets(identifier) ON UPDATE CASCADE ON DELETE CASCADE,
-        FOREIGN KEY (cabinet2) REFERENCES cabinets(identifier) ON UPDATE CASCADE ON DELETE CASCADE
-    )
-    ''')
-    
-    cursor.execute('''
-    CREATE TABLE IF NOT EXISTS fibers (
-        id SERIAL PRIMARY KEY,
-        number_cabinet1 INTEGER NOT NULL,
-        number_cabinet2 INTEGER NOT NULL,
-        fiber_type TEXT NOT NULL DEFAULT '0',
-        network TEXT,
-        cable_id TEXT NOT NULL,
-        FOREIGN KEY (cable_id) REFERENCES cables(cableID) ON UPDATE CASCADE ON DELETE CASCADE
-    )
-    ''')
-    
-    # Add parent_cabinet column if it doesn't exist (for existing databases)
+    # Add parent_cabinet column if it doesn't exist
     try:
         cursor.execute('ALTER TABLE cabinets ADD COLUMN parent_cabinet TEXT NULL')
         cursor.execute('ALTER TABLE cabinets ADD CONSTRAINT fk_parent_cabinet FOREIGN KEY (parent_cabinet) REFERENCES cabinets(identifier) ON UPDATE CASCADE ON DELETE CASCADE')
-    except psycopg2.Error:
-        # Column already exists, rollback and continue
+        conn.commit()
+    except psycopg2.Error as e:
+        print(f"Parent cabinet column already exists or failed: {e}")
         conn.rollback()
     
-    conn.commit()
-    conn.close()
+    # Add port_count to cabinets table
+    try:
+        cursor.execute('ALTER TABLE cabinets ADD COLUMN port_count INTEGER DEFAULT 0')
+        conn.commit()
+    except psycopg2.Error as e:
+        print(f"Port count column already exists: {e}")
+        conn.rollback()
+    
+    # Add port references to fibers table - ONLY if ports table exists
+    try:
+        # First check if ports table actually exists
+        cursor.execute("SELECT to_regclass('public.ports')")
+        ports_exists = cursor.fetchone()[0] is not None
+        
+        if ports_exists:
+            cursor.execute('ALTER TABLE fibers ADD COLUMN port_cabinet1_id INTEGER REFERENCES ports(id)')
+            cursor.execute('ALTER TABLE fibers ADD COLUMN port_cabinet2_id INTEGER REFERENCES ports(id)')
+            conn.commit()
+            
+    except psycopg2.Error as e:
+        print(f"Port reference columns already exist: {e}")
+        conn.rollback()
+    
+    # Final verification
+    try:
+        cursor.execute("""
+            SELECT table_name FROM information_schema.tables 
+            WHERE table_schema = 'public' 
+            ORDER BY table_name
+        """)
+
+    except Exception as e:
+        print(f"Error verifying tables: {e}")
+    finally:
+        conn.close()
+        print("Database initialization completed!")
 
 # RETRIEVE ALL
 @app.route('/database', methods=['GET'])
@@ -106,21 +164,41 @@ def get_network():
                 "cabinets": []
             }
             
-            # Get cabinets for this building (including parent_cabinet field)
+            # Get cabinets for this building (including port_count)
             cursor.execute('''
-            SELECT id, identifier, cabinet_type, parent_cabinet FROM cabinets 
+            SELECT id, identifier, cabinet_type, parent_cabinet, 
+                   COALESCE(port_count, 0) as port_count 
+            FROM cabinets 
             WHERE building_id = %s
             ''', (building["id"],))
             cabinets_data = cursor.fetchall()
             
-            # For each cabinet, get its cables
+            # For each cabinet, get its cables and ports
             for cabinet in cabinets_data:
                 cabinet_info = {
                     "identifier": cabinet["identifier"],
                     "cabinet_type": cabinet["cabinet_type"],
                     "parent_cabinet": cabinet["parent_cabinet"],
+                    "port_count": cabinet["port_count"],
+                    "ports": [],
                     "cables": []
                 }
+                
+                # Get ports for this cabinet
+                cursor.execute('''
+                SELECT id, port_number, status 
+                FROM ports 
+                WHERE cabinet_id = %s 
+                ORDER BY port_number
+                ''', (cabinet["identifier"],))
+                ports_data = cursor.fetchall()
+                
+                for port in ports_data:
+                    cabinet_info["ports"].append({
+                        "id": port["id"],
+                        "port_number": port["port_number"],
+                        "status": port["status"]
+                    })
                 
                 # Get cables connected to this cabinet
                 cursor.execute('''
@@ -131,7 +209,7 @@ def get_network():
                 ''', (cabinet["identifier"], cabinet["identifier"]))
                 cables_data = cursor.fetchall()
                 
-                # For each cable, get its fibers
+                # For each cable, get its fibers with port information
                 for cable in cables_data:
                     cable_info = {
                         "uid": cable["cableID"],
@@ -141,12 +219,15 @@ def get_network():
                         "fibers": []
                     }
                     
-                    # Get fibers for this cable
+                    # Get fibers for this cable with port information
                     cursor.execute('''
-                    SELECT number_cabinet1, number_cabinet2, fiber_type, network 
-                    FROM fibers 
-                    WHERE cable_id = %s
-                    ORDER BY number_cabinet1
+                    SELECT f.number_cabinet1, f.number_cabinet2, f.fiber_type, f.network,
+                           p1.port_number as port1_number, p2.port_number as port2_number
+                    FROM fibers f
+                    LEFT JOIN ports p1 ON f.port_cabinet1_id = p1.id
+                    LEFT JOIN ports p2 ON f.port_cabinet2_id = p2.id
+                    WHERE f.cable_id = %s
+                    ORDER BY f.number_cabinet1
                     ''', (cable["cableID"],))
                     fibers_data = cursor.fetchall()
                     
@@ -155,7 +236,9 @@ def get_network():
                             "number_cabinet1": fiber["number_cabinet1"],
                             "number_cabinet2": fiber["number_cabinet2"],
                             "fiber_type": fiber["fiber_type"],
-                            "network": fiber["network"]
+                            "network": fiber["network"],
+                            "port_cabinet1": fiber["port1_number"],
+                            "port_cabinet2": fiber["port2_number"]
                         }
                         cable_info["fibers"].append(fiber_info)
                     
@@ -177,7 +260,10 @@ def get_network():
 def add_building():
     data = request.get_json()
     
-    if not data or 'name' not in data:
+    # Extract data fields
+    name = data.get('name') if data else None
+    
+    if not name:
         return jsonify({'error': 'Invalid data'}), 400
         
     conn = get_db_connection()
@@ -193,7 +279,7 @@ def add_building():
         # Add new building with order
         cursor.execute(
             'INSERT INTO buildings (name, display_order) VALUES (%s, %s) RETURNING id',
-            (data['name'], new_order)
+            (name, new_order)
         )
         
         conn.commit()
@@ -210,11 +296,16 @@ def add_building():
 def add_cabinet():
     data = request.get_json()
     
-    if not data or 'building_name' not in data or 'identifier' not in data or 'cabinet_type' not in data:
+    # Extract data fields
+    building_name = data.get('building_name') if data else None
+    identifier = data.get('identifier') if data else None
+    cabinet_type = data.get('cabinet_type') if data else None
+    parent_cabinet = data.get('parent_cabinet') if data else None
+    port_count = data.get('port_count') if data else None
+    
+    if not all([building_name, identifier, cabinet_type]):
         return jsonify({'error': 'Invalid data'}), 400
         
-    parent_cabinet = data.get('parent_cabinet')
-    
     conn = get_db_connection()
     cursor = conn.cursor()
     
@@ -222,7 +313,7 @@ def add_cabinet():
         # Get building id
         cursor.execute(
             'SELECT id FROM buildings WHERE name = %s',
-            (data['building_name'],)
+            (building_name,)
         )
         building = cursor.fetchone()
         
@@ -245,8 +336,26 @@ def add_cabinet():
         # Add cabinet
         cursor.execute(
             'INSERT INTO cabinets (identifier, cabinet_type, building_id, parent_cabinet) VALUES (%s, %s, %s, %s)',
-            (data['identifier'], data['cabinet_type'], building_id, parent_cabinet)
+            (identifier, cabinet_type, building_id, parent_cabinet)
         )
+        
+        # Handle port count if provided
+        if port_count is not None:
+            port_count = int(port_count)
+            
+            # Create ports if count > 0
+            if port_count > 0:
+                for port_num in range(1, port_count + 1):
+                    cursor.execute(
+                        "INSERT INTO ports (cabinet_id, port_number) VALUES (%s, %s)",
+                        (identifier, port_num)
+                    )
+            
+            # Update cabinet port count
+            cursor.execute(
+                'UPDATE cabinets SET port_count = %s WHERE identifier = %s',
+                (port_count, identifier)
+            )
         
         conn.commit()
         conn.close()
@@ -268,7 +377,17 @@ def add_cabinet():
 def add_cable():
     data = request.get_json()
     
-    if not data or not all(key in data for key in ['cableID', 'cabinet1', 'cabinet2', 'number', 'num_of_fibers', 'cable_type', 'cabinet1_start', 'cabinet2_start']):
+    # Extract data fields
+    cable_id = data.get('cableID') if data else None
+    cabinet1 = data.get('cabinet1') if data else None
+    cabinet2 = data.get('cabinet2') if data else None
+    number = data.get('number') if data else None
+    num_of_fibers = data.get('num_of_fibers') if data else None
+    cable_type = data.get('cable_type') if data else None
+    cabinet1_start = data.get('cabinet1_start') if data else None
+    cabinet2_start = data.get('cabinet2_start') if data else None
+    
+    if not all([cable_id, cabinet1, cabinet2, number, num_of_fibers, cable_type, cabinet1_start, cabinet2_start]):
         return jsonify({'error': 'Invalid data'}), 400
         
     conn = get_db_connection()
@@ -279,16 +398,15 @@ def add_cable():
         cursor.execute(
             '''INSERT INTO cables (cableID, number, num_of_fibers, cable_type, cabinet1, cabinet2, cabinet1_start, cabinet2_start) 
                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)''',
-            (data['cableID'], data['number'], data['num_of_fibers'], data['cable_type'], 
-             data['cabinet1'], data['cabinet2'], data['cabinet1_start'], data['cabinet2_start'])
+            (cable_id, number, num_of_fibers, cable_type, cabinet1, cabinet2, cabinet1_start, cabinet2_start)
         )
         
         # Add fibers
-        for i in range(int(data['num_of_fibers'])):
+        for i in range(int(num_of_fibers)):
             cursor.execute(
                 '''INSERT INTO fibers (number_cabinet1, number_cabinet2, fiber_type, cable_id) 
                    VALUES (%s, %s, %s, %s)''',
-                (int(data['cabinet1_start']) + i, int(data['cabinet2_start']) + i, "0", data['cableID'])
+                (int(cabinet1_start) + i, int(cabinet2_start) + i, "0", cable_id)
             )
         
         conn.commit()
@@ -386,13 +504,14 @@ def remove_cable(cable_id):
 @app.route('/buildings/update', methods=['PUT'])
 def update_building():
     data = request.get_json()
-    print(data)
-    if not data or 'oldName' not in data or 'newName' not in data:
+    
+    # Extract data fields
+    old_name = data.get('oldName') if data else None
+    new_name = data.get('newName') if data else None
+    
+    if not all([old_name, new_name]):
         return jsonify({'error': 'Invalid data'}), 400
         
-    old_name = data['oldName']
-    new_name = data['newName']
-    
     conn = get_db_connection()
     cursor = conn.cursor()
     
@@ -417,27 +536,43 @@ def update_building():
         conn.close()
         return jsonify({'error': str(e)}), 500
 
+# Replace your update_cabinet endpoint with this debug version:
+
 @app.route('/cabinets/update', methods=['PUT'])
 def update_cabinet():
     data = request.get_json()
+    print(f"🔍 Received data: {data}")
     
-    if not data or 'old_identifier' not in data or 'new_identifier' not in data or 'cabinet_type' not in data:
-        return jsonify({'error': 'Invalid data'}), 400
-        
-    old_identifier = data['old_identifier']
-    new_identifier = data['new_identifier']
-    cabinet_type = data['cabinet_type']
-    building_name = data['building_name']
-    parent_cabinet = data.get('parent_cabinet')
+    # Extract data fields
+    old_identifier = data.get('old_identifier') if data else None
+    new_identifier = data.get('new_identifier') if data else None
+    cabinet_type = data.get('cabinet_type') if data else None
+    building_name = data.get('building_name') if data else None
+    parent_cabinet = data.get('parent_cabinet') if data else None
+    port_count = data.get('port_count') if data else None
+    
+    print(f"🔍 Extracted fields:")
+    print(f"  - old_identifier: {old_identifier}")
+    print(f"  - new_identifier: {new_identifier}")
+    print(f"  - cabinet_type: {cabinet_type}")
+    print(f"  - building_name: {building_name}")
+    print(f"  - parent_cabinet: {parent_cabinet}")
+    print(f"  - port_count: {port_count}")
+    
+    if not all([old_identifier, new_identifier, cabinet_type]):
+        print("❌ Missing required fields")
+        return jsonify({'error': 'Invalid data - missing required fields'}), 400
     
     # Prevent circular reference
     if parent_cabinet == new_identifier:
+        print("❌ Circular reference detected")
         return jsonify({'error': 'Cabinet cannot be parent of itself'}), 400
     
     conn = get_db_connection()
     cursor = conn.cursor()
     
     try:
+        print(f"🔍 Looking for building: {building_name}")
         # Get building id
         cursor.execute(
             'SELECT id FROM buildings WHERE name = %s',
@@ -447,10 +582,13 @@ def update_cabinet():
         
         if not building:
             conn.close()
+            print(f"❌ Building not found: {building_name}")
             return jsonify({'error': 'Building not found'}), 404
             
         building_id = building[0]
+        print(f"✓ Building found with ID: {building_id}")
         
+        print(f"🔍 Checking if cabinet exists: {old_identifier}")
         # Check if the old cabinet exists
         cursor.execute(
             'SELECT identifier FROM cabinets WHERE identifier = %s AND building_id = %s',
@@ -458,18 +596,25 @@ def update_cabinet():
         )
         if not cursor.fetchone():
             conn.close()
+            print(f"❌ Cabinet not found: {old_identifier}")
             return jsonify({'error': 'Cabinet not found'}), 404
+        
+        print("✓ Cabinet exists")
         
         # Check if parent_cabinet exists (if provided)
         if parent_cabinet:
+            print(f"🔍 Checking parent cabinet: {parent_cabinet}")
             cursor.execute(
                 'SELECT identifier FROM cabinets WHERE identifier = %s AND building_id = %s',
                 (parent_cabinet, building_id)
             )
             if not cursor.fetchone():
                 conn.close()
+                print(f"❌ Parent cabinet not found: {parent_cabinet}")
                 return jsonify({'error': 'Parent cabinet does not exist'}), 400
+            print("✓ Parent cabinet exists")
         
+        print("🔄 Updating cabinet...")
         # Update the cabinet
         cursor.execute('''
             UPDATE cabinets 
@@ -477,44 +622,101 @@ def update_cabinet():
             WHERE identifier = %s AND building_id = %s
         ''', (new_identifier, cabinet_type, parent_cabinet, old_identifier, building_id))
         
+        print(f"✓ Cabinet updated. Rows affected: {cursor.rowcount}")
+        
         # Update any children that reference this cabinet as parent
         if old_identifier != new_identifier:
+            print("🔄 Updating child cabinet references...")
             cursor.execute('''
                 UPDATE cabinets 
                 SET parent_cabinet = %s 
                 WHERE parent_cabinet = %s AND building_id = %s
             ''', (new_identifier, old_identifier, building_id))
+            print(f"✓ Child references updated. Rows affected: {cursor.rowcount}")
         
-        # Update any cables that reference this cabinet (ON UPDATE CASCADE should handle this, but being explicit)
-        # The foreign key constraints should handle this automatically
+        # Handle port count if provided
+        if port_count is not None:
+            print(f"🔄 Handling port count: {port_count}")
+            try:
+                port_count = int(port_count)
+                print(f"✓ Port count converted to int: {port_count}")
+                
+                # Check if ports table exists
+                cursor.execute("SELECT to_regclass('public.ports')")
+                ports_table_exists = cursor.fetchone()[0] is not None
+                print(f"🔍 Ports table exists: {ports_table_exists}")
+                
+                if ports_table_exists:
+                    # Delete existing ports for this cabinet
+                    print(f"🔄 Deleting existing ports for cabinet: {new_identifier}")
+                    cursor.execute("DELETE FROM ports WHERE cabinet_id = %s", (new_identifier,))
+                    deleted_count = cursor.rowcount
+                    print(f"✓ Deleted {deleted_count} existing ports")
+                    
+                    # Create new ports if count > 0
+                    if port_count > 0:
+                        print(f"🔄 Creating {port_count} new ports...")
+                        for port_num in range(1, port_count + 1):
+                            cursor.execute(
+                                "INSERT INTO ports (cabinet_id, port_number) VALUES (%s, %s)",
+                                (new_identifier, port_num)
+                            )
+                        print(f"✓ Created {port_count} new ports")
+                    
+                    # Update cabinet port count
+                    print("🔄 Updating cabinet port_count field...")
+                    cursor.execute(
+                        'UPDATE cabinets SET port_count = %s WHERE identifier = %s',
+                        (port_count, new_identifier)
+                    )
+                    print(f"✓ Cabinet port_count updated to {port_count}")
+                else:
+                    print("⚠️ Ports table doesn't exist, skipping port operations")
+                    
+            except ValueError as e:
+                print(f"❌ Error converting port_count to int: {e}")
+                conn.rollback()
+                conn.close()
+                return jsonify({'error': f'Invalid port_count value: {port_count}'}), 400
+            except Exception as e:
+                print(f"❌ Error handling ports: {e}")
+                conn.rollback()
+                conn.close()
+                return jsonify({'error': f'Error handling ports: {str(e)}'}), 500
         
         conn.commit()
+        print("✅ All changes committed successfully")
         conn.close()
         
         return jsonify({'success': True}), 200
         
     except psycopg2.IntegrityError as e:
+        print(f"❌ Database integrity error: {e}")
         conn.rollback()
         conn.close()
         if 'unique constraint' in str(e).lower():
             return jsonify({'error': 'Cabinet with this identifier already exists'}), 409
         return jsonify({'error': 'Database integrity error'}), 400
     except Exception as e:
+        print(f"❌ Unexpected error: {e}")
+        print(f"❌ Error type: {type(e)}")
         conn.rollback()
         conn.close()
         return jsonify({'error': str(e)}), 500
-
+    
+    
 @app.route('/cables/update', methods=['PUT'])
 def update_cable():
     data = request.get_json()
     
-    if not data or 'cableID' not in data:
+    # Extract data fields
+    cable_id = data.get('cableID') if data else None
+    number = data.get('number') if data else None
+    cable_type = data.get('cable_type') if data else None
+    
+    if not cable_id:
         return jsonify({'error': 'Invalid data'}), 400
         
-    cable_id = data['cableID']
-    number = data.get('number')
-    cable_type = data.get('cable_type')
-    
     conn = get_db_connection()
     cursor = conn.cursor()
     
@@ -561,13 +763,14 @@ def update_cable():
 def update_network():
     data = request.get_json()
     
-    if not data or 'cableID' not in data or 'fiberNumber' not in data:
+    # Extract data fields
+    cable_id = data.get('cableID') if data else None
+    fiber_number = data.get('fiberNumber') if data else None
+    new_network = data.get('network') if data else None
+    
+    if not all([cable_id, fiber_number]):
         return jsonify({'error': 'Invalid data'}), 400
         
-    cable_id = data.get('cableID')
-    fiber_number = data.get('fiberNumber')
-    new_network = data.get('network')
-    
     conn = get_db_connection()
     cursor = conn.cursor()
     
@@ -596,9 +799,6 @@ def update_network():
 def update_building_order():
     data = request.get_json()
     
-    if not data or not isinstance(data, list):
-        return jsonify({'error': 'Invalid data format, expected an array of buildings with name and order'}), 400
-    
     conn = get_db_connection()
     cursor = conn.cursor()
     
@@ -608,14 +808,17 @@ def update_building_order():
         
         # Update each building's order
         for building_data in data:
-            if 'name' not in building_data or 'order' not in building_data:
+            building_name = building_data.get('name')
+            building_order = building_data.get('order')
+            
+            if not all([building_name, building_order is not None]):
                 conn.rollback()
                 conn.close()
                 return jsonify({'error': 'Each building must have name and order properties'}), 400
             
             cursor.execute(
                 'UPDATE buildings SET display_order = %s WHERE name = %s',
-                (building_data['order'], building_data['name'])
+                (building_order, building_name)
             )
         
         # Commit the transaction
@@ -629,6 +832,122 @@ def update_building_order():
         conn.close()
         print(f"Error updating building order: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
+@app.route('/cabinets/port_update/<cabinet_id>', methods=['PUT'])
+def update_cabinet_ports(cabinet_id):
+    data = request.get_json()
+    
+    # Extract data fields
+    port_count = data.get('port_count') if data else None
+    
+    if port_count is None:
+        return jsonify({'error': 'port_count is required'}), 400
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # Check if cabinet exists
+        cursor.execute('SELECT identifier FROM cabinets WHERE identifier = %s', (cabinet_id,))
+        if not cursor.fetchone():
+            conn.close()
+            return jsonify({'error': 'Cabinet not found'}), 404
+        
+        # Delete existing ports first
+        cursor.execute('DELETE FROM ports WHERE cabinet_id = %s', (cabinet_id,))
+        
+        # Create new ports
+        for port_num in range(1, port_count + 1):
+            cursor.execute('''
+                INSERT INTO ports (cabinet_id, port_number, status) 
+                VALUES (%s, %s, %s)
+            ''', (cabinet_id, port_num, 'available'))
+        
+        # Update cabinet port count
+        cursor.execute('''
+            UPDATE cabinets SET port_count = %s WHERE identifier = %s
+        ''', (port_count, cabinet_id))
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({'message': f'Successfully updated cabinet {cabinet_id} to {port_count} ports'}), 200
+        
+    except Exception as e:
+        conn.rollback()
+        conn.close()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/ports/auto-assign', methods=['POST'])
+def auto_assign_fibers_endpoint():
+    conn = get_db_connection()
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    
+    try:
+        # Get all fibers that don't have port assignments
+        cursor.execute('''
+            SELECT f.id, f.cable_id, c.cabinet1, c.cabinet2, f.number_cabinet1, f.number_cabinet2
+            FROM fibers f
+            JOIN cables c ON f.cable_id = c.cableID
+            WHERE f.port_cabinet1_id IS NULL OR f.port_cabinet2_id IS NULL
+            ORDER BY f.cable_id, f.number_cabinet1
+        ''')
+        fibers = cursor.fetchall()
+        
+        assignments_made = 0
+        
+        for fiber in fibers:
+            cabinet1 = fiber['cabinet1']
+            cabinet2 = fiber['cabinet2']
+            fiber_id = fiber['id']
+            
+            # Get available ports for cabinet1
+            cursor.execute('''
+                SELECT id FROM ports 
+                WHERE cabinet_id = %s AND status = 'available' 
+                ORDER BY port_number 
+                LIMIT 1
+            ''', (cabinet1,))
+            port1 = cursor.fetchone()
+            
+            # Get available ports for cabinet2
+            cursor.execute('''
+                SELECT id FROM ports 
+                WHERE cabinet_id = %s AND status = 'available' 
+                ORDER BY port_number 
+                LIMIT 1
+            ''', (cabinet2,))
+            port2 = cursor.fetchone()
+            
+            if port1 and port2:
+                port1_id = port1['id']
+                port2_id = port2['id']
+                
+                # Assign fiber to ports
+                cursor.execute('''
+                    UPDATE fibers 
+                    SET port_cabinet1_id = %s, port_cabinet2_id = %s 
+                    WHERE id = %s
+                ''', (port1_id, port2_id, fiber_id))
+                
+                # Mark ports as occupied
+                cursor.execute('''
+                    UPDATE ports SET status = 'occupied' 
+                    WHERE id IN (%s, %s)
+                ''', (port1_id, port2_id))
+                
+                assignments_made += 1
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({'message': f'Successfully assigned {assignments_made} fibers to ports'}), 200
+        
+    except Exception as e:
+        conn.rollback()
+        conn.close()
+        return jsonify({'error': str(e)}), 500
+    
 
 if __name__ == "__main__":
     init_db()

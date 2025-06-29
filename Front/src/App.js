@@ -53,6 +53,8 @@ export default function App() {
                     rightBuilding={selectedConnectBuilding}
                     selectedCable={selectedCable}
                     onCableSelect={setSelectedCable}
+                    selectedLeftCabinet={selectedGridCabinet}   
+                    selectedRightCabinet={selectedConnectCabinet} 
                 />
                 <FiberDisplay
                     selectedCable={selectedCable}

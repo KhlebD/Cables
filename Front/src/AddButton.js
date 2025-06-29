@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './styles.css'; 
 
-function AddButton({ itemType, fields, onAdd }) {
+function AddButton({ itemType, fields, onAdd, initialValues = {} }){
     const [isPopupOpen, setIsPopupOpen] = useState(false);
-    const [formData, setFormData] = useState({});
+    const [formData, setFormData] = useState(initialValues);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     const formRef = useRef(null);
@@ -12,11 +12,11 @@ function AddButton({ itemType, fields, onAdd }) {
     // Reset form data when popup closes
     useEffect(() => {
         if (!isPopupOpen) {
-            setFormData({});
+            setFormData(initialValues);
             setError('');
             setSuccess('');
         }
-    }, [isPopupOpen]);
+    }, [isPopupOpen, initialValues]);
 
     // Handle clicks outside the form
     useEffect(() => {
