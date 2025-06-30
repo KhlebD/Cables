@@ -1228,3 +1228,290 @@ ul {
     width: 420px;
     height: 400px;
 }
+
+/* Additional styles for port integration in BoxDisplay */
+
+/* Port display container */
+.port-display {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 10px;
+}
+
+.cabinet-title {
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+.cabinet-title h4 {
+    margin: 0 0 5px 0;
+    font-size: 14px;
+    color: #333;
+}
+
+.cabinet-title .port-info {
+    font-size: 12px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    background: #28a745;
+    color: white;
+}
+
+/* Selected port info */
+.selected-port-info {
+    margin-top: 8px;
+    padding: 4px 8px;
+    background: #e3f2fd;
+    border: 1px solid #2196F3;
+    border-radius: 4px;
+    font-size: 12px;
+    color: #1976D2;
+    text-align: center;
+}
+
+/* Port connection info panel */
+.port-connection-info {
+    background: #f8f9fa;
+    border: 2px solid #28a745;
+    border-radius: 8px;
+    padding: 15px;
+    margin: 20px auto;
+    max-width: 500px;
+    text-align: center;
+}
+
+.port-connection-info h4 {
+    margin: 0 0 10px 0;
+    color: #28a745;
+    font-size: 16px;
+}
+
+.connection-details {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 15px;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.connection-details span {
+    padding: 5px 10px;
+    border-radius: 4px;
+    background: #e9ecef;
+}
+
+.connection-details span:nth-child(2) {
+    background: #28a745;
+    color: white;
+    font-size: 18px;
+}
+
+.create-connection-button {
+    padding: 10px 20px;
+    background: #28a745;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: bold;
+    transition: all 0.2s ease;
+}
+
+.create-connection-button:hover {
+    background: #218838;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+}
+
+/* Adjustments for building boxes with ports - Made wider and more rectangular */
+.building-box.has-ports .building-content {
+    width: 100%;
+    height: 100%;
+    padding: 0;
+}
+
+/* Wider, more rectangular building boxes for better port layout */
+.building-box.has-ports-24 {
+    width: 400px;
+    height: 200px;
+}
+
+.building-box.has-ports-48 {
+    width: 450px;
+    height: 280px;
+}
+
+.building-box.has-ports-72 {
+    width: 500px;
+    height: 320px;
+}
+
+.building-box.has-ports-144 {
+    width: 550px;
+    height: 450px;
+}
+
+/* Hide cables when ports are displayed */
+.building-boxes.ports-mode .cables-svg {
+    display: none;
+}
+
+/* Adjust building boxes container when ports are displayed */
+.building-boxes {
+    position: relative;
+}
+
+.building-boxes.ports-mode {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 40px;
+    height: auto;
+    min-height: 400px;
+    padding: 20px;
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.building-boxes.ports-mode .building-box {
+    position: static;
+    margin: 0;
+    flex-shrink: 0;
+}
+
+/* Port grid adjustments for better fit in building boxes */
+.building-box.has-ports-24 .port-grid {
+    gap: 3px;
+}
+
+.building-box.has-ports-48 .port-grid {
+    gap: 2px;
+}
+
+.building-box.has-ports-72 .port-grid {
+    gap: 2px;
+}
+
+.building-box.has-ports-144 .port-grid {
+    gap: 1px;
+}
+
+/* Port circle size adjustments for building boxes - Made bigger */
+.building-box.has-ports-24 .port-circle {
+    width: 22px;
+    height: 22px;
+}
+
+.building-box.has-ports-48 .port-circle {
+    width: 20px;
+    height: 20px;
+}
+
+.building-box.has-ports-72 .port-circle {
+    width: 20px;
+    height: 20px;
+}
+
+.building-box.has-ports-144 .port-circle {
+    width: 20px;
+    height: 20px;
+}
+
+/* Adjust font sizes for bigger ports */
+.building-box.has-ports-24 .port-number {
+    font-size: 10px;
+}
+
+.building-box.has-ports-48 .port-number {
+    font-size: 9px;
+}
+
+.building-box.has-ports-72 .port-number,
+.building-box.has-ports-144 .port-number {
+    font-size: 8px;
+}
+
+/* Enhanced hover effects for ports in building boxes */
+.building-box .port-circle:hover {
+    transform: scale(1.2);
+    z-index: 10;
+    position: relative;
+}
+
+/* Port tooltips */
+.building-box .port-circle {
+    position: relative;
+}
+
+.building-box .port-circle:hover::after {
+    content: attr(title);
+    position: absolute;
+    bottom: 120%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #333;
+    color: white;
+    padding: 4px 6px;
+    border-radius: 3px;
+    font-size: 10px;
+    white-space: nowrap;
+    z-index: 1000;
+    pointer-events: none;
+}
+
+/* Animation for port selection */
+.port-circle.port-selected {
+    animation: port-pulse 1s infinite alternate;
+}
+
+@keyframes port-pulse {
+    0% { 
+        box-shadow: 0 0 5px rgba(33, 150, 243, 0.5);
+    }
+    100% { 
+        box-shadow: 0 0 15px rgba(33, 150, 243, 0.8);
+    }
+}
+
+/* Responsive layout adjustments */
+@media (max-width: 1500px) {
+    .building-boxes.ports-mode {
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+        max-width: 100%;
+    }
+    
+    .building-box.has-ports-144 {
+        width: 500px;
+        height: 400px;
+    }
+    
+    .building-box.has-ports-72 {
+        width: 450px;
+        height: 300px;
+    }
+}
+
+@media (max-width: 768px) {
+    .building-box.has-ports {
+        width: 90vw;
+        max-width: 400px;
+    }
+    
+    .building-boxes.ports-mode {
+        flex-direction: column;
+        width: 100%;
+        padding: 10px;
+        gap: 15px;
+    }
+}

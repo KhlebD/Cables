@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import Store from './Store';
 import AddButton from './AddButton';
 import RemoveButton from './RemoveButton';
+import PortGrid from './PortGrid';
 import './styles.css';
 
 function BoxDisplay({
@@ -14,6 +15,8 @@ function BoxDisplay({
 }) {
     const buildings = Store(state => state.buildings);
     const [hoveredCableId, setHoveredCableId] = useState(null);
+    const [selectedLeftPort, setSelectedLeftPort] = useState(null);
+    const [selectedRightPort, setSelectedRightPort] = useState(null);
 
     // Get cabinet objects from identifiers
     const leftCabinetObj = useMemo(() => {
@@ -28,6 +31,30 @@ function BoxDisplay({
         const building = buildings?.find(b => b.name === rightBuilding);
         return building?.cabinets?.find(cab => cab.identifier === selectedRightCabinet.identifier) || null;
     }, [buildings, rightBuilding, selectedRightCabinet]);
+
+    // Get occupied ports for each cabinet
+    const getOccupiedPorts = (cabinetObj) => {
+        if (!cabinetObj || !cabinetObj.cables) return [];
+        
+        const occupiedPorts = [];
+        cabinetObj.cables.forEach(cable => {
+            if (cable.fibers) {
+                cable.fibers.forEach(fiber => {
+                    // Determine which cabinet we're looking at and get the appropriate port
+                    if (cable.cabinet1 === cabinetObj.identifier && fiber.port_cabinet1) {
+                        occupiedPorts.push(parseInt(fiber.port_cabinet1));
+                    } else if (cable.cabinet2 === cabinetObj.identifier && fiber.port_cabinet2) {
+                        occupiedPorts.push(parseInt(fiber.port_cabinet2));
+                    }
+                });
+            }
+        });
+        
+        return [...new Set(occupiedPorts)]; // Remove duplicates
+    };
+
+    const leftOccupiedPorts = useMemo(() => getOccupiedPorts(leftCabinetObj), [leftCabinetObj]);
+    const rightOccupiedPorts = useMemo(() => getOccupiedPorts(rightCabinetObj), [rightCabinetObj]);
 
     // Get cables to display based on selection mode
     const displayedCables = useMemo(() => {
@@ -113,6 +140,39 @@ function BoxDisplay({
     const getCablePosition = (index, totalCables) => {
         const spacing = 150 / (totalCables + 1);
         return spacing * (index + 1);
+    };
+
+    // Handle port selection
+    const handleLeftPortSelect = (portNumber) => {
+        setSelectedLeftPort(prevPort => prevPort === portNumber ? null : portNumber);
+    };
+
+    const handleRightPortSelect = (portNumber) => {
+        setSelectedRightPort(prevPort => prevPort === portNumber ? null : portNumber);
+    };
+
+    // Check if cabinet should display ports
+    const shouldDisplayPorts = (cabinetObj) => {
+        return cabinetObj && cabinetObj.port_count && cabinetObj.port_count > 0;
+    };
+
+    // Get building box class names based on port count
+    const getBuildingBoxClass = (cabinetObj, isLeft) => {
+        let classes = ['building-box'];
+        
+        if (!cabinetObj && !leftBuilding && !rightBuilding) {
+            classes.push('empty-box');
+        }
+        
+        if (cabinetObj) {
+            classes.push('cabinet-selected');
+            if (shouldDisplayPorts(cabinetObj)) {
+                classes.push('has-ports');
+                classes.push(`has-ports-${cabinetObj.port_count}`);
+            }
+        }
+        
+        return classes.join(' ');
     };
 
     // Get display info for left side
@@ -224,17 +284,42 @@ function BoxDisplay({
 
     return (
         <div className="cable-display">
-            <div className="building-boxes">
+            <div className={`building-boxes ${shouldDisplayPorts(leftCabinetObj) || shouldDisplayPorts(rightCabinetObj) ? 'ports-mode' : ''}`}>
                 {/* Left Box */}
-                <div className={`building-box ${!leftInfo ? 'empty-box' : ''} ${leftCabinetObj ? 'cabinet-selected' : ''}`}>
+                <div className={getBuildingBoxClass(leftCabinetObj, true)}>
                     {leftInfo ? (
                         <div className="building-content">
-                            <h3>{leftInfo.title}</h3>
-                            <div className="building-details">
-                                <div className="building-type">{leftInfo.subtitle}</div>
-                                <div className="port-info">{leftInfo.portInfo}</div>
-                                <div className="cable-count">{leftInfo.cableCount}</div>
-                            </div>
+                            {!shouldDisplayPorts(leftCabinetObj) && (
+                                <>
+                                    <h3>{leftInfo.title}</h3>
+                                    <div className="building-details">
+                                        <div className="building-type">{leftInfo.subtitle}</div>
+                                        <div className="port-info">{leftInfo.portInfo}</div>
+                                        <div className="cable-count">{leftInfo.cableCount}</div>
+                                    </div>
+                                </>
+                            )}
+                            
+                            {shouldDisplayPorts(leftCabinetObj) && (
+                                <div className="port-display">
+                                    <div className="cabinet-title">
+                                        <h4>{leftInfo.title}</h4>
+                                        <div className="port-info">{leftInfo.portInfo}</div>
+                                    </div>
+                                    <PortGrid
+                                        portCount={leftCabinetObj.port_count}
+                                        onPortSelect={handleLeftPortSelect}
+                                        selectedPort={selectedLeftPort}
+                                        occupiedPorts={leftOccupiedPorts}
+                                        side="left"
+                                    />
+                                    {selectedLeftPort && (
+                                        <div className="selected-port-info">
+                                            פורט {selectedLeftPort} נבחר
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     ) : (
                         <div className="empty-content">
@@ -243,64 +328,66 @@ function BoxDisplay({
                     )}
                 </div>
 
-                {/* SVG for cables */}
-                <svg className="cables-svg">
-                    {displayedCables.length > 0 && displayedCables.map((cable, index) => (
-                        <g key={cable.uid}>
-                            {/* Glow effect for hover */}
-                            {hoveredCableId === cable.uid && (
+                {/* SVG for cables - only show when not displaying ports */}
+                {!shouldDisplayPorts(leftCabinetObj) && !shouldDisplayPorts(rightCabinetObj) && (
+                    <svg className="cables-svg">
+                        {displayedCables.length > 0 && displayedCables.map((cable, index) => (
+                            <g key={cable.uid}>
+                                {/* Glow effect for hover */}
+                                {hoveredCableId === cable.uid && (
+                                    <line
+                                        x1="0"
+                                        y1={getCablePosition(index, displayedCables.length)}
+                                        x2="100%"
+                                        y2={getCablePosition(index, displayedCables.length)}
+                                        stroke="blue"
+                                        strokeWidth="16"
+                                        opacity="0.4"
+                                    />
+                                )}
+
+                                {/* Main cable line */}
                                 <line
                                     x1="0"
                                     y1={getCablePosition(index, displayedCables.length)}
                                     x2="100%"
                                     y2={getCablePosition(index, displayedCables.length)}
-                                    stroke="blue"
-                                    strokeWidth="16"
-                                    opacity="0.4"
+                                    stroke={selectedCable === cable.uid ? "blue" : "black"}
+                                    strokeWidth="8"
+                                    onMouseEnter={() => setHoveredCableId(cable.uid)}
+                                    onMouseLeave={() => setHoveredCableId(null)}
+                                    onClick={() => onCableSelect(cable.uid)}
+                                    style={{ cursor: 'pointer' }}
                                 />
-                            )}
 
-                            {/* Main cable line */}
-                            <line
-                                x1="0"
-                                y1={getCablePosition(index, displayedCables.length)}
-                                x2="100%"
-                                y2={getCablePosition(index, displayedCables.length)}
-                                stroke={selectedCable === cable.uid ? "blue" : "black"}
-                                strokeWidth="8"
-                                onMouseEnter={() => setHoveredCableId(cable.uid)}
-                                onMouseLeave={() => setHoveredCableId(null)}
-                                onClick={() => onCableSelect(cable.uid)}
-                                style={{ cursor: 'pointer' }}
-                            />
+                                {/* Cable label */}
+                                <text
+                                    x="50%"
+                                    y={getCablePosition(index, displayedCables.length) - 10}
+                                    textAnchor="middle"
+                                    className="cable-label"
+                                >
+                                    {`כבל ${cable.number} (${cable.num_of_fibers} סיבים)`}
+                                </text>
 
-                            {/* Cable label */}
-                            <text
-                                x="50%"
-                                y={getCablePosition(index, displayedCables.length) - 10}
-                                textAnchor="middle"
-                                className="cable-label"
-                            >
-                                {`כבל ${cable.number} (${cable.num_of_fibers} סיבים)`}
-                            </text>
-
-                            {/* Direction/Type indicator */}
-                            <text
-                                x="50%"
-                                y={getCablePosition(index, displayedCables.length) + 15}
-                                textAnchor="middle"
-                                className="cable-direction"
-                            >
-                                {cable.direction === 'outgoing' ? '→' :
-                                    cable.direction === 'incoming' ? '←' :
-                                        cable.direction === 'between' ? '↔' : '⟷'}
-                            </text>
-                        </g>
-                    ))}
-                </svg>
+                                {/* Direction/Type indicator */}
+                                <text
+                                    x="50%"
+                                    y={getCablePosition(index, displayedCables.length) + 15}
+                                    textAnchor="middle"
+                                    className="cable-direction"
+                                >
+                                    {cable.direction === 'outgoing' ? '→' :
+                                        cable.direction === 'incoming' ? '←' :
+                                            cable.direction === 'between' ? '↔' : '⟷'}
+                                </text>
+                            </g>
+                        ))}
+                    </svg>
+                )}
 
                 {/* Right Box */}
-                <div className={`building-box ${!rightInfo ? 'empty-box' : ''} ${rightCabinetObj ? 'cabinet-selected' : ''} ${rightInfo?.isTargetList ? 'target-box' : ''}`}>
+                <div className={getBuildingBoxClass(rightCabinetObj, false) + (rightInfo?.isTargetList ? ' target-box' : '')}>
                     {rightInfo?.isTargetList ? (
                         <div className="target-content">
                             <div className="target-title">יעדי הכבלים ({rightInfo.targets.length})</div>
@@ -315,12 +402,37 @@ function BoxDisplay({
                         </div>
                     ) : rightInfo ? (
                         <div className="building-content">
-                            <h3>{rightInfo.title}</h3>
-                            <div className="building-details">
-                                <div className="building-type">{rightInfo.subtitle}</div>
-                                <div className="port-info">{rightInfo.portInfo}</div>
-                                <div className="cable-count">{rightInfo.cableCount}</div>
-                            </div>
+                            {!shouldDisplayPorts(rightCabinetObj) && (
+                                <>
+                                    <h3>{rightInfo.title}</h3>
+                                    <div className="building-details">
+                                        <div className="building-type">{rightInfo.subtitle}</div>
+                                        <div className="port-info">{rightInfo.portInfo}</div>
+                                        <div className="cable-count">{rightInfo.cableCount}</div>
+                                    </div>
+                                </>
+                            )}
+                            
+                            {shouldDisplayPorts(rightCabinetObj) && (
+                                <div className="port-display">
+                                    <div className="cabinet-title">
+                                        <h4>{rightInfo.title}</h4>
+                                        <div className="port-info">{rightInfo.portInfo}</div>
+                                    </div>
+                                    <PortGrid
+                                        portCount={rightCabinetObj.port_count}
+                                        onPortSelect={handleRightPortSelect}
+                                        selectedPort={selectedRightPort}
+                                        occupiedPorts={rightOccupiedPorts}
+                                        side="right"
+                                    />
+                                    {selectedRightPort && (
+                                        <div className="selected-port-info">
+                                            פורט {selectedRightPort} נבחר
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     ) : (
                         <div className="empty-content">
@@ -329,6 +441,33 @@ function BoxDisplay({
                     )}
                 </div>
             </div>
+
+            {/* Port Connection Display - Show when both cabinets have ports and ports are selected */}
+            {shouldDisplayPorts(leftCabinetObj) && shouldDisplayPorts(rightCabinetObj) && 
+             (selectedLeftPort || selectedRightPort) && (
+                <div className="port-connection-info">
+                    <h4>חיבור פורטים</h4>
+                    <div className="connection-details">
+                        <span>פורט שמאל: {selectedLeftPort || 'לא נבחר'}</span>
+                        <span>↔</span>
+                        <span>פורט ימין: {selectedRightPort || 'לא נבחר'}</span>
+                    </div>
+                    {selectedLeftPort && selectedRightPort && (
+                        <button 
+                            className="create-connection-button"
+                            onClick={() => {
+                                // Here you would implement the port connection logic
+                                console.log(`Connecting port ${selectedLeftPort} to port ${selectedRightPort}`);
+                                // Reset selections after connection
+                                setSelectedLeftPort(null);
+                                setSelectedRightPort(null);
+                            }}
+                        >
+                            צור חיבור
+                        </button>
+                    )}
+                </div>
+            )}
 
             {/* Cable Info Panel - Show when cable is selected AND has port info */}
             {selectedCable && (leftCabinetObj?.port_count > 0 || rightCabinetObj?.port_count > 0) && (
