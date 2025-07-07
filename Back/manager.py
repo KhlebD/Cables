@@ -185,6 +185,7 @@ def get_network():
                 }
                 
                 # Get ports for this cabinet
+
                 cursor.execute('''
                 SELECT id, port_number, status 
                 FROM ports 
@@ -201,8 +202,10 @@ def get_network():
                     })
                 
                 # Get cables connected to this cabinet
+                print(f"🔍 Getting cables for cabinet: {cabinet['identifier']}")
+                
                 cursor.execute('''
-                SELECT id, cableID, number, num_of_fibers, cable_type, cabinet1, cabinet2, 
+                SELECT id, cableid, number, num_of_fibers, cable_type, cabinet1, cabinet2, 
                        cabinet1_start, cabinet2_start 
                 FROM cables 
                 WHERE cabinet1 = %s OR cabinet2 = %s
@@ -212,13 +215,16 @@ def get_network():
                 # For each cable, get its fibers with port information
                 for cable in cables_data:
                     cable_info = {
-                        "uid": cable["cableID"],
+                        "uid": cable["cableid"],
                         "number": cable["number"],
                         "num_of_fibers": cable["num_of_fibers"],
                         "cable_type": cable["cable_type"],
+                        "cabinet1": cable["cabinet1"],
+                        "cabinet2": cable["cabinet2"],
+                        "cabinet1_start": cable["cabinet1_start"],
+                        "cabinet2_start": cable["cabinet2_start"],
                         "fibers": []
                     }
-                    
                     # Get fibers for this cable with port information
                     cursor.execute('''
                     SELECT f.number_cabinet1, f.number_cabinet2, f.fiber_type, f.network,
@@ -228,7 +234,7 @@ def get_network():
                     LEFT JOIN ports p2 ON f.port_cabinet2_id = p2.id
                     WHERE f.cable_id = %s
                     ORDER BY f.number_cabinet1
-                    ''', (cable["cableID"],))
+                    ''', (cable["cableid"],))
                     fibers_data = cursor.fetchall()
                     
                     for fiber in fibers_data:
@@ -485,8 +491,35 @@ def remove_cable(cable_id):
     cursor = conn.cursor()
     
     try:
+        # First, get all ports that are assigned to fibers of this cable
+        cursor.execute('''
+            SELECT f.port_cabinet1_id, f.port_cabinet2_id
+            FROM fibers f
+            WHERE f.cable_id = %s AND (f.port_cabinet1_id IS NOT NULL OR f.port_cabinet2_id IS NOT NULL)
+        ''', (cable_id,))
+        port_assignments = cursor.fetchall()
+        
+        # Collect all port IDs that need to be freed
+        port_ids_to_free = []
+        for assignment in port_assignments:
+            if assignment[0]:  # port_cabinet1_id
+                port_ids_to_free.append(assignment[0])
+            if assignment[1]:  # port_cabinet2_id
+                port_ids_to_free.append(assignment[1])
+        
+        print(f"🔄 Freeing {len(port_ids_to_free)} ports for cable {cable_id}")
+        
+        # Free the ports before deleting the cable
+        if port_ids_to_free:
+            cursor.execute('''
+                UPDATE ports SET status = 'available' 
+                WHERE id = ANY(%s)
+            ''', (port_ids_to_free,))
+            print(f"✅ Freed ports: {port_ids_to_free}")
+        
+        # Now delete the cable (this will cascade delete fibers)
         cursor.execute(
-            'DELETE FROM cables WHERE cableID = %s',
+            'DELETE FROM cables WHERE cableid = %s',
             (cable_id,)
         )
         
@@ -886,9 +919,10 @@ def auto_assign_fibers_endpoint():
     try:
         # Get all fibers that don't have port assignments
         cursor.execute('''
-            SELECT f.id, f.cable_id, c.cabinet1, c.cabinet2, f.number_cabinet1, f.number_cabinet2
+            SELECT f.id, f.cable_id, c.cabinet1, c.cabinet2, f.number_cabinet1, f.number_cabinet2,
+                   c.cabinet1_start, c.cabinet2_start, c.num_of_fibers
             FROM fibers f
-            JOIN cables c ON f.cable_id = c.cableID
+            JOIN cables c ON f.cable_id = c.cableid
             WHERE f.port_cabinet1_id IS NULL OR f.port_cabinet2_id IS NULL
             ORDER BY f.cable_id, f.number_cabinet1
         ''')
@@ -896,32 +930,107 @@ def auto_assign_fibers_endpoint():
         
         assignments_made = 0
         
+        # Group fibers by cable to process each cable together
+        cables_processed = set()
+        
         for fiber in fibers:
+            cable_id = fiber['cable_id']
+            
+            # Skip if we already processed this cable
+            if cable_id in cables_processed:
+                continue
+                
+            cables_processed.add(cable_id)
             cabinet1 = fiber['cabinet1']
             cabinet2 = fiber['cabinet2']
-            fiber_id = fiber['id']
+            cabinet1_start = fiber['cabinet1_start']
+            cabinet2_start = fiber['cabinet2_start']
+            num_fibers = fiber['num_of_fibers']
             
-            # Get available ports for cabinet1
+            print(f"🔄 Processing cable {cable_id}: {cabinet1} ports {cabinet1_start}-{cabinet1_start + num_fibers - 1} ↔ {cabinet2} ports {cabinet2_start}-{cabinet2_start + num_fibers - 1}")
+            
+            # Calculate required port ranges
+            cabinet1_ports_needed = list(range(cabinet1_start, cabinet1_start + num_fibers))
+            cabinet2_ports_needed = list(range(cabinet2_start, cabinet2_start + num_fibers))
+            
+            # Check if all required ports are available in cabinet1
             cursor.execute('''
-                SELECT id FROM ports 
-                WHERE cabinet_id = %s AND status = 'available' 
-                ORDER BY port_number 
-                LIMIT 1
-            ''', (cabinet1,))
-            port1 = cursor.fetchone()
+                SELECT port_number FROM ports 
+                WHERE cabinet_id = %s AND port_number = ANY(%s) AND status != 'available'
+            ''', (cabinet1, cabinet1_ports_needed))
+            occupied_ports_cab1 = [row['port_number'] for row in cursor.fetchall()]
             
-            # Get available ports for cabinet2
+            if occupied_ports_cab1:
+                conn.rollback()
+                conn.close()
+                return jsonify({
+                    'error': f'Ports {occupied_ports_cab1} in cabinet {cabinet1} are already occupied'
+                }), 400
+            
+            # Check if all required ports are available in cabinet2
             cursor.execute('''
-                SELECT id FROM ports 
-                WHERE cabinet_id = %s AND status = 'available' 
-                ORDER BY port_number 
-                LIMIT 1
-            ''', (cabinet2,))
-            port2 = cursor.fetchone()
+                SELECT port_number FROM ports 
+                WHERE cabinet_id = %s AND port_number = ANY(%s) AND status != 'available'
+            ''', (cabinet2, cabinet2_ports_needed))
+            occupied_ports_cab2 = [row['port_number'] for row in cursor.fetchall()]
             
-            if port1 and port2:
-                port1_id = port1['id']
-                port2_id = port2['id']
+            if occupied_ports_cab2:
+                conn.rollback()
+                conn.close()
+                return jsonify({
+                    'error': f'Ports {occupied_ports_cab2} in cabinet {cabinet2} are already occupied'
+                }), 400
+            
+            # Check if all required ports exist (in case cabinet doesn't have enough ports)
+            cursor.execute('''
+                SELECT COUNT(*) as count FROM ports 
+                WHERE cabinet_id = %s AND port_number = ANY(%s)
+            ''', (cabinet1, cabinet1_ports_needed))
+            if cursor.fetchone()['count'] != num_fibers:
+                conn.rollback()
+                conn.close()
+                return jsonify({
+                    'error': f'Cabinet {cabinet1} does not have all required ports {cabinet1_ports_needed}'
+                }), 400
+                
+            cursor.execute('''
+                SELECT COUNT(*) as count FROM ports 
+                WHERE cabinet_id = %s AND port_number = ANY(%s)
+            ''', (cabinet2, cabinet2_ports_needed))
+            if cursor.fetchone()['count'] != num_fibers:
+                conn.rollback()
+                conn.close()
+                return jsonify({
+                    'error': f'Cabinet {cabinet2} does not have all required ports {cabinet2_ports_needed}'
+                }), 400
+            
+            # All ports are available, now assign them
+            # Get all fibers for this cable
+            cursor.execute('''
+                SELECT f.id, f.number_cabinet1, f.number_cabinet2
+                FROM fibers f
+                WHERE f.cable_id = %s
+                ORDER BY f.number_cabinet1
+            ''', (cable_id,))
+            cable_fibers = cursor.fetchall()
+            
+            for i, cable_fiber in enumerate(cable_fibers):
+                fiber_id = cable_fiber['id']
+                port1_number = cabinet1_start + i
+                port2_number = cabinet2_start + i
+                
+                # Get port IDs
+                cursor.execute('''
+                    SELECT id FROM ports 
+                    WHERE cabinet_id = %s AND port_number = %s
+                ''', (cabinet1, port1_number))
+                port1_id = cursor.fetchone()['id']
+                
+                cursor.execute('''
+                    SELECT id FROM ports 
+                    WHERE cabinet_id = %s AND port_number = %s
+                ''', (cabinet2, port2_number))
+                port2_id = cursor.fetchone()['id']
                 
                 # Assign fiber to ports
                 cursor.execute('''
@@ -937,18 +1046,20 @@ def auto_assign_fibers_endpoint():
                 ''', (port1_id, port2_id))
                 
                 assignments_made += 1
+                print(f"✅ Assigned fiber {cable_fiber['number_cabinet1']}→{cable_fiber['number_cabinet2']} to ports {port1_number}→{port2_number}")
         
         conn.commit()
         conn.close()
         
-        return jsonify({'message': f'Successfully assigned {assignments_made} fibers to ports'}), 200
+        return jsonify({'message': f'Successfully assigned {assignments_made} fibers to their designated ports'}), 200
         
     except Exception as e:
+        print(f"❌ Error in auto-assign: {e}")
         conn.rollback()
         conn.close()
         return jsonify({'error': str(e)}), 500
     
-
+    
 if __name__ == "__main__":
     init_db()
     app.run(debug=True, port=5001)

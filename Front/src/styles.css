@@ -1358,14 +1358,32 @@ ul {
     height: 450px;
 }
 
-/* Hide cables when ports are displayed */
+/* Hide cables when ports are displayed, UNLESS showing specific cabinet connections */
 .building-boxes.ports-mode .cables-svg {
     display: none;
+}
+
+/* Show cables when both specific cabinets are selected and have connections */
+.building-boxes.ports-mode.show-cables .cables-svg {
+    display: block;
+    position: absolute;
+    left: 25%;
+    width: 50%;
+    height: 150px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 5;
 }
 
 /* Adjust building boxes container when ports are displayed */
 .building-boxes {
     position: relative;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 0 auto;
+    width: 800px;
+    height: 200px;
 }
 
 .building-boxes.ports-mode {

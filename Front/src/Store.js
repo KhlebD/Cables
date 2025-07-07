@@ -191,6 +191,7 @@ const Store = create((set, get) => ({
                 return { success: false };
             }
 
+            // Optimistic update - add cable to local state
             set((state) => ({
                 buildings: state.buildings.map(building => ({
                     ...building,
@@ -203,11 +204,17 @@ const Store = create((set, get) => ({
                                     number,
                                     num_of_fibers,
                                     cable_type,
+                                    cabinet1,
+                                    cabinet2,
+                                    cabinet1_start,
+                                    cabinet2_start,
                                     fibers: Array.from({ length: num_of_fibers }, (_, i) => ({
                                         number_cabinet1: parseInt(cabinet1_start) + i,
                                         number_cabinet2: parseInt(cabinet2_start) + i,
                                         fiber_type: "0",
-                                        network: null
+                                        network: null,
+                                        port_cabinet1: null,
+                                        port_cabinet2: null
                                     }))
                                 }]
                             };
@@ -216,13 +223,32 @@ const Store = create((set, get) => ({
                     })
                 }))
             }));
+
+            // Auto-assign ports for the new cable
+            try {
+                const assignResponse = await fetch('http://localhost:5001/ports/auto-assign', {
+                    method: 'POST'
+                });
+
+                if (assignResponse.ok) {
+                    // Refresh data to get port assignments
+                    await get().fetchNetwork();
+                } else {
+                    const errorData = await assignResponse.json();
+                    console.warn('Port assignment failed:', errorData.error);
+                }
+            } catch (assignError) {
+                console.warn('Port auto-assignment failed:', assignError);
+            }
+
             return { success: true };
 
         } catch (error) {
             console.error('Error adding cable:', error);
-            throw error;
+            return { success: false, error: error.message };
         }
     },
+
     removeBuilding: async (buildingName) => {
         const previousState = get().buildings;
         set((state) => ({
@@ -419,7 +445,7 @@ const Store = create((set, get) => ({
                     : building
             )
         }));
-        
+
         try {
             const requestBody = {
                 new_identifier: formData.identifier,

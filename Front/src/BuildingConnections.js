@@ -312,8 +312,7 @@ function BuildingConnections({ onBuildingSelect, onCableSelect, selectedConnectB
                                 }}
                                 onUpdate={async (formData) => {
                                     try {
-                                        console.log(selectedConnectBuilding);
-                                        console.log("SUCCESS");
+
                                         const parentCabinet = formData.parent_cabinet === 'ללא' ? null : formData.parent_cabinet;
                                         const result = await Store.getState().updateCabinet({
                                             ...formData,
@@ -323,8 +322,7 @@ function BuildingConnections({ onBuildingSelect, onCableSelect, selectedConnectB
                                         });
                                         
                                         if (result.success) {
-                                            console.log(selectedCabinet.identifier);
-                                            console.log("SUCCESS");
+ 
                                             const updatedCabinet = {
                                                 ...selectedCabinet,
                                                 building_name: selectedConnectBuilding,

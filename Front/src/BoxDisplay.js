@@ -20,7 +20,6 @@ function BoxDisplay({
 
     // Get cabinet objects from identifiers
     const leftCabinetObj = useMemo(() => {
-        console.log(selectedLeftCabinet);
         if (!selectedLeftCabinet || !leftBuilding) return null;
         const building = buildings?.find(b => b.name === leftBuilding);
         return building?.cabinets?.find(cab => cab.identifier === selectedLeftCabinet.identifier) || null;
@@ -35,12 +34,12 @@ function BoxDisplay({
     // Get occupied ports for each cabinet
     const getOccupiedPorts = (cabinetObj) => {
         if (!cabinetObj || !cabinetObj.cables) return [];
-        
+
         const occupiedPorts = [];
         cabinetObj.cables.forEach(cable => {
             if (cable.fibers) {
                 cable.fibers.forEach(fiber => {
-                    // Determine which cabinet we're looking at and get the appropriate port
+                    // Check which cabinet we're looking at and get the appropriate port
                     if (cable.cabinet1 === cabinetObj.identifier && fiber.port_cabinet1) {
                         occupiedPorts.push(parseInt(fiber.port_cabinet1));
                     } else if (cable.cabinet2 === cabinetObj.identifier && fiber.port_cabinet2) {
@@ -49,9 +48,12 @@ function BoxDisplay({
                 });
             }
         });
-        
+        console.log('🔍 Cabinet cables:', cabinetObj?.cables);
+        console.log('🔍 Sample fiber:', cabinetObj?.cables?.[0]?.fibers?.[0]);
         return [...new Set(occupiedPorts)]; // Remove duplicates
     };
+    
+
 
     const leftOccupiedPorts = useMemo(() => getOccupiedPorts(leftCabinetObj), [leftCabinetObj]);
     const rightOccupiedPorts = useMemo(() => getOccupiedPorts(rightCabinetObj), [rightCabinetObj]);
@@ -89,13 +91,32 @@ function BoxDisplay({
 
         // Mode 2: Two cabinets selected - show cables between them
         if (leftCabinetObj && rightCabinetObj) {
-            return leftCabinetObj.cables?.filter(cable => {
-                return cable.cabinet1 === rightCabinetObj.identifier ||
-                    cable.cabinet2 === rightCabinetObj.identifier;
-            }).map(cable => ({
-                ...cable,
-                direction: 'between'
-            })) || [];
+            const cables = [];
+
+            // Check cables from left cabinet to right cabinet
+            leftCabinetObj.cables?.forEach(cable => {
+                if (cable.cabinet1 === rightCabinetObj.identifier ||
+                    cable.cabinet2 === rightCabinetObj.identifier) {
+                    cables.push({
+                        ...cable,
+                        direction: 'between'
+                    });
+                }
+            });
+
+            // Also check cables from right cabinet to left cabinet (in case they're only stored on one side)
+            rightCabinetObj.cables?.forEach(cable => {
+                if ((cable.cabinet1 === leftCabinetObj.identifier ||
+                    cable.cabinet2 === leftCabinetObj.identifier) &&
+                    !cables.some(existingCable => existingCable.uid === cable.uid)) {
+                    cables.push({
+                        ...cable,
+                        direction: 'between'
+                    });
+                }
+            });
+
+            return cables;
         }
 
         // Mode 3: No cabinets selected - show building-to-building cables (your original logic)
@@ -159,11 +180,11 @@ function BoxDisplay({
     // Get building box class names based on port count
     const getBuildingBoxClass = (cabinetObj, isLeft) => {
         let classes = ['building-box'];
-        
+
         if (!cabinetObj && !leftBuilding && !rightBuilding) {
             classes.push('empty-box');
         }
-        
+
         if (cabinetObj) {
             classes.push('cabinet-selected');
             if (shouldDisplayPorts(cabinetObj)) {
@@ -171,7 +192,7 @@ function BoxDisplay({
                 classes.push(`has-ports-${cabinetObj.port_count}`);
             }
         }
-        
+
         return classes.join(' ');
     };
 
@@ -299,7 +320,7 @@ function BoxDisplay({
                                     </div>
                                 </>
                             )}
-                            
+
                             {shouldDisplayPorts(leftCabinetObj) && (
                                 <div className="port-display">
                                     <div className="cabinet-title">
@@ -313,11 +334,6 @@ function BoxDisplay({
                                         occupiedPorts={leftOccupiedPorts}
                                         side="left"
                                     />
-                                    {selectedLeftPort && (
-                                        <div className="selected-port-info">
-                                            פורט {selectedLeftPort} נבחר
-                                        </div>
-                                    )}
                                 </div>
                             )}
                         </div>
@@ -328,10 +344,10 @@ function BoxDisplay({
                     )}
                 </div>
 
-                {/* SVG for cables - only show when not displaying ports */}
-                {!shouldDisplayPorts(leftCabinetObj) && !shouldDisplayPorts(rightCabinetObj) && (
+                {/* SVG for cables - only show when buildings are selected (not panels) */}
+                {!selectedLeftCabinet && !selectedRightCabinet && leftBuilding && rightBuilding && displayedCables.length > 0 && (
                     <svg className="cables-svg">
-                        {displayedCables.length > 0 && displayedCables.map((cable, index) => (
+                        {displayedCables.map((cable, index) => (
                             <g key={cable.uid}>
                                 {/* Glow effect for hover */}
                                 {hoveredCableId === cable.uid && (
@@ -412,7 +428,7 @@ function BoxDisplay({
                                     </div>
                                 </>
                             )}
-                            
+
                             {shouldDisplayPorts(rightCabinetObj) && (
                                 <div className="port-display">
                                     <div className="cabinet-title">
@@ -426,11 +442,6 @@ function BoxDisplay({
                                         occupiedPorts={rightOccupiedPorts}
                                         side="right"
                                     />
-                                    {selectedRightPort && (
-                                        <div className="selected-port-info">
-                                            פורט {selectedRightPort} נבחר
-                                        </div>
-                                    )}
                                 </div>
                             )}
                         </div>
@@ -443,79 +454,30 @@ function BoxDisplay({
             </div>
 
             {/* Port Connection Display - Show when both cabinets have ports and ports are selected */}
-            {shouldDisplayPorts(leftCabinetObj) && shouldDisplayPorts(rightCabinetObj) && 
-             (selectedLeftPort || selectedRightPort) && (
-                <div className="port-connection-info">
-                    <h4>חיבור פורטים</h4>
-                    <div className="connection-details">
-                        <span>פורט שמאל: {selectedLeftPort || 'לא נבחר'}</span>
-                        <span>↔</span>
-                        <span>פורט ימין: {selectedRightPort || 'לא נבחר'}</span>
+            {shouldDisplayPorts(leftCabinetObj) && shouldDisplayPorts(rightCabinetObj) &&
+                (selectedLeftPort || selectedRightPort) && (
+                    <div className="port-connection-info">
+                        <h4>חיבור פורטים</h4>
+                        <div className="connection-details">
+                            <span>פורט שמאל: {selectedLeftPort || 'לא נבחר'}</span>
+                            <span>↔</span>
+                            <span>פורט ימין: {selectedRightPort || 'לא נבחר'}</span>
+                        </div>
+                        {selectedLeftPort && selectedRightPort && (
+                            <button
+                                className="create-connection-button"
+                                onClick={() => {
+                                    // Here you would implement the port connection logic
+                                    // Reset selections after connection
+                                    setSelectedLeftPort(null);
+                                    setSelectedRightPort(null);
+                                }}
+                            >
+                                צור חיבור
+                            </button>
+                        )}
                     </div>
-                    {selectedLeftPort && selectedRightPort && (
-                        <button 
-                            className="create-connection-button"
-                            onClick={() => {
-                                // Here you would implement the port connection logic
-                                console.log(`Connecting port ${selectedLeftPort} to port ${selectedRightPort}`);
-                                // Reset selections after connection
-                                setSelectedLeftPort(null);
-                                setSelectedRightPort(null);
-                            }}
-                        >
-                            צור חיבור
-                        </button>
-                    )}
-                </div>
-            )}
-
-            {/* Cable Info Panel - Show when cable is selected AND has port info */}
-            {selectedCable && (leftCabinetObj?.port_count > 0 || rightCabinetObj?.port_count > 0) && (
-                <div className="cable-info-panel">
-                    {(() => {
-                        const cable = displayedCables.find(c => c.uid === selectedCable);
-                        if (!cable) return null;
-
-                        return (
-                            <div className="cable-details-panel">
-                                <h4>פרטי כבל {cable.number}</h4>
-                                <div className="cable-stats">
-                                    <span>סוג: {cable.cable_type}</span>
-                                    <span>סיבים: {cable.num_of_fibers}</span>
-                                    {cable.direction !== 'building-to-building' && (
-                                        <span>כיוון: {
-                                            cable.direction === 'outgoing' ? 'יוצא' :
-                                                cable.direction === 'incoming' ? 'נכנס' : 'דו-כיווני'
-                                        }</span>
-                                    )}
-                                </div>
-
-                                <div className="port-assignments">
-                                    <h5>הקצאת פורטים:</h5>
-                                    <div className="port-list">
-                                        {cable.fibers?.slice(0, 5).map(fiber => (
-                                            <div key={`${fiber.number_cabinet1}-${fiber.number_cabinet2}`} className="port-assignment">
-                                                <span>סיב {fiber.number_cabinet1}→{fiber.number_cabinet2}</span>
-                                                {(fiber.port_cabinet1 || fiber.port_cabinet2) && (
-                                                    <span className="port-info">
-                                                        פורט: {fiber.port_cabinet1 || 'לא מוקצה'} → {fiber.port_cabinet2 || 'לא מוקצה'}
-                                                    </span>
-                                                )}
-                                                {fiber.network && (
-                                                    <span className="network-info">רשת: {fiber.network}</span>
-                                                )}
-                                            </div>
-                                        )) || <div>אין מידע על סיבים</div>}
-                                        {cable.fibers?.length > 5 && (
-                                            <div className="more-fibers">ועוד {cable.fibers.length - 5} סיבים...</div>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                        );
-                    })()}
-                </div>
-            )}
+                )}
 
             {/* Add/Remove Buttons */}
             <div className='add-remove-container'>

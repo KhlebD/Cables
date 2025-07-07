@@ -8,15 +8,29 @@ function AddButton({ itemType, fields, onAdd, initialValues = {} }){
     const [success, setSuccess] = useState('');
     const formRef = useRef(null);
     const buttonRef = useRef(null);
+    
+    // Store the previous initialValues to detect meaningful changes
+    const prevInitialValuesRef = useRef(initialValues);
 
-    // Reset form data when popup closes
+    // Reset form data when popup closes OR when initialValues meaningfully change
     useEffect(() => {
         if (!isPopupOpen) {
             setFormData(initialValues);
             setError('');
             setSuccess('');
         }
-    }, [isPopupOpen, initialValues]);
+    }, [isPopupOpen]);
+
+    // Separate effect to handle initialValues changes when popup is open
+    useEffect(() => {
+        // Only update if initialValues actually changed (deep comparison for key fields)
+        const hasChanged = JSON.stringify(prevInitialValuesRef.current) !== JSON.stringify(initialValues);
+        
+        if (hasChanged) {
+            setFormData(initialValues);
+            prevInitialValuesRef.current = initialValues;
+        }
+    }, [initialValues]);
 
     // Handle clicks outside the form
     useEffect(() => {
@@ -45,7 +59,7 @@ function AddButton({ itemType, fields, onAdd, initialValues = {} }){
         try {
             await onAdd(formData);
             setSuccess(`${itemType} added successfully!`);
-            setFormData({});  // Clear form
+            setFormData(initialValues);  // Reset to initial values instead of empty object
             setTimeout(() => {
                 setIsPopupOpen(false);
                 setSuccess('');
