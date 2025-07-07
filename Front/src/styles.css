@@ -798,31 +798,30 @@ ul {
 }
 
 .building-boxes {
+    position: relative;
     display: flex;
-    justify-content: space-between;  /* Changed from space-around */
+    justify-content: space-between;
     align-items: center;
     margin: 0 auto;
-    width: 800px;    /* Increased to give more space between boxes */
-    position: relative;
-    height: 200px;        /* Fixed height for container */
+    width: 1000px;
+    height: 200px;
 }
 
+
 .building-box {
-    width: 200px;
-    height: 150px;
+    width: 300px;
+    height: 400px;  /* Fixed size for all boxes */
     background: white;
     border: 2px solid #2196F3;
     border-radius: 8px;
     display: flex;
     flex-direction: column;
-    align-items: center;      
-    justify-content: center;  
+    align-items: center;
+    justify-content: center;
     padding: 15px;
-    z-index: 1;
+    position: relative;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
     transition: all 0.3s;
-    font-size: 18px;        
-    font-weight: 500;        
 }
 
 .building-box.empty-box {
@@ -832,13 +831,20 @@ ul {
     font-size: 16px;
     color: #666;
 }
+
 .cables-svg {
     position: absolute;
-    left: 200px;          /* Align with end of first box */
-    width: calc(100% - 400px);  /* Space between boxes */
+    left: 320px;  /* After first box */
+    width: 460px;  /* Space between boxes */
     height: 150px;
-    top: 25px;
-    z-index: 0;
+    top: 125px;   /* Centered vertically */
+    z-index: 5;
+    pointer-events: none;
+}
+
+.cables-svg line,
+.cables-svg text {
+    pointer-events: all;
 }
 
 .cable-label {
@@ -1103,24 +1109,24 @@ ul {
 }
 
 /* Grid layouts for different port counts */
+/* Port grid takes proportional space based on port count */
 .port-grid-24 {
-    grid-template-rows: repeat(2, 1fr);
-    grid-template-columns: repeat(12, 1fr);
+    height: 25%;  /* 24/144 = ~25% */
+    align-self: flex-start;
 }
 
 .port-grid-48 {
-    grid-template-rows: repeat(4, 1fr);
-    grid-template-columns: repeat(12, 1fr);
+    height: 50%;  /* 48/144 = ~50% */
+    align-self: flex-start;
 }
 
 .port-grid-72 {
-    grid-template-rows: repeat(6, 1fr);
-    grid-template-columns: repeat(12, 1fr);
+    height: 75%;  /* 72/144 = ~75% */
+    align-self: flex-start;
 }
 
 .port-grid-144 {
-    grid-template-rows: repeat(12, 1fr);
-    grid-template-columns: repeat(12, 1fr);
+    height: 100%; /* Full box */
 }
 
 /* Individual port circles */
@@ -1178,56 +1184,7 @@ ul {
     color: white;
 }
 
-/* Responsive sizing for different port counts */
-.port-grid-24 .port-circle {
-    width: 18px;
-    height: 18px;
-}
 
-.port-grid-48 .port-circle {
-    width: 16px;
-    height: 16px;
-}
-
-.port-grid-72 .port-circle {
-    width: 14px;
-    height: 14px;
-}
-
-.port-grid-144 .port-circle {
-    width: 12px;
-    height: 12px;
-}
-
-.port-grid-72 .port-number,
-.port-grid-144 .port-number {
-    font-size: 7px;
-}
-
-/* Building box adjustments for ports */
-.building-box.has-ports {
-    padding: 5px;
-}
-
-.building-box.has-ports-24 {
-    width: 320px;
-    height: 180px;
-}
-
-.building-box.has-ports-48 {
-    width: 320px;
-    height: 240px;
-}
-
-.building-box.has-ports-72 {
-    width: 380px;
-    height: 280px;
-}
-
-.building-box.has-ports-144 {
-    width: 420px;
-    height: 400px;
-}
 
 /* Additional styles for port integration in BoxDisplay */
 
@@ -1330,63 +1287,9 @@ ul {
     box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
 }
 
-/* Adjustments for building boxes with ports - Made wider and more rectangular */
-.building-box.has-ports .building-content {
-    width: 100%;
-    height: 100%;
-    padding: 0;
-}
-
-/* Wider, more rectangular building boxes for better port layout */
-.building-box.has-ports-24 {
-    width: 400px;
-    height: 200px;
-}
-
-.building-box.has-ports-48 {
-    width: 450px;
-    height: 280px;
-}
-
-.building-box.has-ports-72 {
-    width: 500px;
-    height: 320px;
-}
-
-.building-box.has-ports-144 {
-    width: 550px;
-    height: 450px;
-}
-
-/* Hide cables when ports are displayed, UNLESS showing specific cabinet connections */
-.building-boxes.ports-mode .cables-svg {
-    display: none;
-}
-
-/* Show cables when both specific cabinets are selected and have connections */
-.building-boxes.ports-mode.show-cables .cables-svg {
-    display: block;
-    position: absolute;
-    left: 25%;
-    width: 50%;
-    height: 150px;
-    top: 50%;
-    transform: translateY(-50%);
-    z-index: 5;
-}
 
 /* Adjust building boxes container when ports are displayed */
 .building-boxes {
-    position: relative;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin: 0 auto;
-    width: 800px;
-    height: 200px;
-}
-
-.building-boxes.ports-mode {
     display: flex;
     flex-direction: row;
     justify-content: space-between;
@@ -1396,66 +1299,8 @@ ul {
     min-height: 400px;
     padding: 20px;
     width: 100%;
-    max-width: 1400px;
+    max-width: 1100px;
     margin: 0 auto;
-}
-
-.building-boxes.ports-mode .building-box {
-    position: static;
-    margin: 0;
-    flex-shrink: 0;
-}
-
-/* Port grid adjustments for better fit in building boxes */
-.building-box.has-ports-24 .port-grid {
-    gap: 3px;
-}
-
-.building-box.has-ports-48 .port-grid {
-    gap: 2px;
-}
-
-.building-box.has-ports-72 .port-grid {
-    gap: 2px;
-}
-
-.building-box.has-ports-144 .port-grid {
-    gap: 1px;
-}
-
-/* Port circle size adjustments for building boxes - Made bigger */
-.building-box.has-ports-24 .port-circle {
-    width: 22px;
-    height: 22px;
-}
-
-.building-box.has-ports-48 .port-circle {
-    width: 20px;
-    height: 20px;
-}
-
-.building-box.has-ports-72 .port-circle {
-    width: 20px;
-    height: 20px;
-}
-
-.building-box.has-ports-144 .port-circle {
-    width: 20px;
-    height: 20px;
-}
-
-/* Adjust font sizes for bigger ports */
-.building-box.has-ports-24 .port-number {
-    font-size: 10px;
-}
-
-.building-box.has-ports-48 .port-number {
-    font-size: 9px;
-}
-
-.building-box.has-ports-72 .port-number,
-.building-box.has-ports-144 .port-number {
-    font-size: 8px;
 }
 
 /* Enhanced hover effects for ports in building boxes */

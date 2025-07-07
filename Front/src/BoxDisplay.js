@@ -48,11 +48,9 @@ function BoxDisplay({
                 });
             }
         });
-        console.log('🔍 Cabinet cables:', cabinetObj?.cables);
-        console.log('🔍 Sample fiber:', cabinetObj?.cables?.[0]?.fibers?.[0]);
         return [...new Set(occupiedPorts)]; // Remove duplicates
     };
-    
+
 
 
     const leftOccupiedPorts = useMemo(() => getOccupiedPorts(leftCabinetObj), [leftCabinetObj]);
@@ -84,7 +82,6 @@ function BoxDisplay({
                     ...cable,
                     other_cabinet: otherCabinet,
                     other_building: otherBuilding,
-                    direction: cable.cabinet1 === leftCabinetObj.identifier ? 'outgoing' : 'incoming'
                 };
             }) || [];
         }
@@ -99,8 +96,8 @@ function BoxDisplay({
                     cable.cabinet2 === rightCabinetObj.identifier) {
                     cables.push({
                         ...cable,
-                        direction: 'between'
                     });
+                console.log('    ✅ Cable matches!');
                 }
             });
 
@@ -111,11 +108,10 @@ function BoxDisplay({
                     !cables.some(existingCable => existingCable.uid === cable.uid)) {
                     cables.push({
                         ...cable,
-                        direction: 'between'
                     });
                 }
             });
-
+            console.log('  📊 Found cables between panels:', cables);
             return cables;
         }
 
@@ -146,7 +142,6 @@ function BoxDisplay({
                             cable_type: cable.cable_type,
                             cabinet1: cab1.identifier,
                             cabinet2: connectedCabinet.identifier,
-                            direction: 'building-to-building'
                         });
                     }
                 });
@@ -178,7 +173,7 @@ function BoxDisplay({
     };
 
     // Get building box class names based on port count
-    const getBuildingBoxClass = (cabinetObj, isLeft) => {
+    const getBuildingBoxClass = (cabinetObj) => {
         let classes = ['building-box'];
 
         if (!cabinetObj && !leftBuilding && !rightBuilding) {
@@ -187,10 +182,6 @@ function BoxDisplay({
 
         if (cabinetObj) {
             classes.push('cabinet-selected');
-            if (shouldDisplayPorts(cabinetObj)) {
-                classes.push('has-ports');
-                classes.push(`has-ports-${cabinetObj.port_count}`);
-            }
         }
 
         return classes.join(' ');
@@ -303,11 +294,27 @@ function BoxDisplay({
         return filteredCabinets.map(cab => cab.identifier);
     };
 
+    // Add this debug logging right before the cable SVG in BoxDisplay:
+    console.log('🔍 Cable display debug:');
+    console.log('  leftBuilding:', leftBuilding);
+    console.log('  rightBuilding:', rightBuilding);
+    console.log('  selectedLeftCabinet:', selectedLeftCabinet);
+    console.log('  selectedRightCabinet:', selectedRightCabinet);
+    console.log('  leftCabinetObj:', leftCabinetObj);
+    console.log('  rightCabinetObj:', rightCabinetObj);
+    console.log('  displayedCables:', displayedCables);
+    console.log('  displayedCables.length:', displayedCables.length);
+
+    // Current condition:
+    const showCables = ((leftBuilding && rightBuilding && !selectedLeftCabinet && !selectedRightCabinet) ||
+        (leftCabinetObj && rightCabinetObj)) && displayedCables.length > 0;
+    console.log('  showCables:', showCables);
+
     return (
         <div className="cable-display">
             <div className={`building-boxes ${shouldDisplayPorts(leftCabinetObj) || shouldDisplayPorts(rightCabinetObj) ? 'ports-mode' : ''}`}>
                 {/* Left Box */}
-                <div className={getBuildingBoxClass(leftCabinetObj, true)}>
+                <div className={getBuildingBoxClass(leftCabinetObj)}>
                     {leftInfo ? (
                         <div className="building-content">
                             {!shouldDisplayPorts(leftCabinetObj) && (
@@ -344,8 +351,8 @@ function BoxDisplay({
                     )}
                 </div>
 
-                {/* SVG for cables - only show when buildings are selected (not panels) */}
-                {!selectedLeftCabinet && !selectedRightCabinet && leftBuilding && rightBuilding && displayedCables.length > 0 && (
+                {/* SVG for cables - show for buildings OR when both panels are selected */}
+                {((leftBuilding && rightBuilding) || (leftCabinetObj && rightCabinetObj)) && displayedCables.length > 0 && (
                     <svg className="cables-svg">
                         {displayedCables.map((cable, index) => (
                             <g key={cable.uid}>
@@ -385,25 +392,13 @@ function BoxDisplay({
                                 >
                                     {`כבל ${cable.number} (${cable.num_of_fibers} סיבים)`}
                                 </text>
-
-                                {/* Direction/Type indicator */}
-                                <text
-                                    x="50%"
-                                    y={getCablePosition(index, displayedCables.length) + 15}
-                                    textAnchor="middle"
-                                    className="cable-direction"
-                                >
-                                    {cable.direction === 'outgoing' ? '→' :
-                                        cable.direction === 'incoming' ? '←' :
-                                            cable.direction === 'between' ? '↔' : '⟷'}
-                                </text>
                             </g>
                         ))}
                     </svg>
                 )}
 
                 {/* Right Box */}
-                <div className={getBuildingBoxClass(rightCabinetObj, false) + (rightInfo?.isTargetList ? ' target-box' : '')}>
+                <div className={getBuildingBoxClass(rightCabinetObj) + (rightInfo?.isTargetList ? ' target-box' : '')}>
                     {rightInfo?.isTargetList ? (
                         <div className="target-content">
                             <div className="target-title">יעדי הכבלים ({rightInfo.targets.length})</div>
