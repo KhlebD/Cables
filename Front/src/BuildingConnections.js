@@ -7,7 +7,7 @@ import EditButton from './EditButton';
 import './styles.css';
 import { CSSTransition } from 'react-transition-group';
 
-function BuildingConnections({ onBuildingSelect, onCableSelect, selectedConnectBuilding, selectedCabinet, onCabinetSelect, filterBy, filterByCabinet }) {
+function BuildingConnections({ onBuildingSelect, onCableSelect, selectedConnectBuilding, selectedCabinet, onCabinetSelect, onLeftPortSelect, onRightPortSelect, onFiberSelect, filterBy, filterByCabinet }) {
 
     const buildings = Store(state => state.buildings);
     const selectedBuilding = buildings?.find(b => b.name === selectedConnectBuilding);
@@ -108,6 +108,10 @@ function BuildingConnections({ onBuildingSelect, onCableSelect, selectedConnectB
     }, [filterByCabinet, buildings]);
 
     const handleCabinetClick = (cabinet) => {
+        onCableSelect(null);
+        onFiberSelect(null);
+        onLeftPortSelect(null);
+        onRightPortSelect(null);
         if (cabinet?.identifier === selectedCabinet?.identifier) {
             onCabinetSelect(null);
         }
@@ -136,6 +140,9 @@ function BuildingConnections({ onBuildingSelect, onCableSelect, selectedConnectB
                         onCableSelect={onCableSelect}
                         selectedBuilding={selectedConnectBuilding}
                         onCabinetSelect={onCabinetSelect}
+                        onLeftPortSelect={onLeftPortSelect}
+                        onRightPortSelect={onRightPortSelect}
+                        onFiberSelect={onFiberSelect}
                     />
                 </div>
             </div>
@@ -317,12 +324,12 @@ function BuildingConnections({ onBuildingSelect, onCableSelect, selectedConnectB
                                         const result = await Store.getState().updateCabinet({
                                             ...formData,
                                             parent_cabinet: parentCabinet,
-                                            building_name: selectedConnectBuilding, 
+                                            building_name: selectedConnectBuilding,
                                             oldIdentifier: selectedCabinet.identifier,
                                         });
-                                        
+
                                         if (result.success) {
- 
+
                                             const updatedCabinet = {
                                                 ...selectedCabinet,
                                                 building_name: selectedConnectBuilding,

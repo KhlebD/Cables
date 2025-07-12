@@ -9,14 +9,21 @@ function BoxDisplay({
     leftBuilding,
     rightBuilding,
     selectedCable,
-    onCableSelect,
     selectedLeftCabinet,
-    selectedRightCabinet
+    selectedRightCabinet,
+    selectedLeftPort,
+    selectedRightPort,
+    onLeftBuildingSelect,
+    onRightBuildingSelect,
+    onLeftCabinetSelect,
+    onRightCabinetSelect,
+    onCableSelect,
+    onLeftPortSelect,
+    onRightPortSelect,
+    onFiberSelect
 }) {
     const buildings = Store(state => state.buildings);
     const [hoveredCableId, setHoveredCableId] = useState(null);
-    const [selectedLeftPort, setSelectedLeftPort] = useState(null);
-    const [selectedRightPort, setSelectedRightPort] = useState(null);
 
     // Get cabinet objects from identifiers
     const leftCabinetObj = useMemo(() => {
@@ -51,11 +58,37 @@ function BoxDisplay({
         return [...new Set(occupiedPorts)]; // Remove duplicates
     };
 
+    // Get ports that belong to the selected cable
+    const getCablePortsForCabinet = (cabinetObj, selectedCableUid) => {
+        if (!cabinetObj || !selectedCableUid) return [];
 
+        const cable = cabinetObj.cables?.find(c => c.uid === selectedCableUid);
+        if (!cable || !cable.fibers) return [];
+
+        const cablePorts = [];
+        cable.fibers.forEach(fiber => {
+            // Check which cabinet we're looking at and get the appropriate port
+            if (cable.cabinet1 === cabinetObj.identifier && fiber.port_cabinet1) {
+                cablePorts.push(parseInt(fiber.port_cabinet1));
+            } else if (cable.cabinet2 === cabinetObj.identifier && fiber.port_cabinet2) {
+                cablePorts.push(parseInt(fiber.port_cabinet2));
+            }
+        });
+
+        return cablePorts;
+    };
 
     const leftOccupiedPorts = useMemo(() => getOccupiedPorts(leftCabinetObj), [leftCabinetObj]);
     const rightOccupiedPorts = useMemo(() => getOccupiedPorts(rightCabinetObj), [rightCabinetObj]);
+    const leftCablePorts = useMemo(() =>
+        getCablePortsForCabinet(leftCabinetObj, selectedCable),
+        [leftCabinetObj, selectedCable]
+    );
 
+    const rightCablePorts = useMemo(() =>
+        getCablePortsForCabinet(rightCabinetObj, selectedCable),
+        [rightCabinetObj, selectedCable]
+    );
     // Get cables to display based on selection mode
     const displayedCables = useMemo(() => {
         // Mode 1: One cabinet selected - show all its cables
@@ -97,7 +130,6 @@ function BoxDisplay({
                     cables.push({
                         ...cable,
                     });
-                console.log('    ✅ Cable matches!');
                 }
             });
 
@@ -111,7 +143,6 @@ function BoxDisplay({
                     });
                 }
             });
-            console.log('  📊 Found cables between panels:', cables);
             return cables;
         }
 
@@ -158,14 +189,92 @@ function BoxDisplay({
         return spacing * (index + 1);
     };
 
-    // Handle port selection
+    const findConnectedPort = (fromCabinet, fromPort) => {
+        if (!fromCabinet || !buildings) return null;
+
+        // Search through all cables in the fromCabinet to find which one uses this port
+        for (const cable of fromCabinet.cables || []) {
+            if (!cable.fibers) continue;
+
+            // Find the fiber that uses this port
+            const fiber = cable.fibers.find(f => {
+                if (cable.cabinet1 === fromCabinet.identifier) {
+                    return parseInt(f.port_cabinet1) === fromPort;
+                } else if (cable.cabinet2 === fromCabinet.identifier) {
+                    return parseInt(f.port_cabinet2) === fromPort;
+                }
+                return false;
+            });
+
+            if (!fiber) continue; // This cable doesn't use this port
+
+            // Get the other cabinet identifier and port from the cable/fiber
+            let otherCabinetId, otherPort;
+
+            if (cable.cabinet1 === fromCabinet.identifier) {
+                otherCabinetId = cable.cabinet2;
+                otherPort = parseInt(fiber.port_cabinet2);
+            } else {
+                otherCabinetId = cable.cabinet1;
+                otherPort = parseInt(fiber.port_cabinet1);
+            }
+
+            // Find the other cabinet object in all buildings
+            let otherCabinet = null;
+            let otherBuilding = null;
+
+            buildings.forEach(building => {
+                const foundCab = building.cabinets?.find(cab => cab.identifier === otherCabinetId);
+                if (foundCab) {
+                    otherCabinet = foundCab;
+                    otherBuilding = building.name;
+                }
+            });
+
+            if (otherCabinet) {
+                return {
+                    portNumber: otherPort,
+                    fiber: fiber,
+                    cabinet: otherCabinet,
+                    building: otherBuilding,
+                    cable: cable
+                };
+            }
+        }
+
+        return null;
+    };
+
     const handleLeftPortSelect = (portNumber) => {
-        setSelectedLeftPort(prevPort => prevPort === portNumber ? null : portNumber);
+        onLeftPortSelect(portNumber);
+
+        // Find connected port
+        const connectedPort = findConnectedPort(leftCabinetObj, portNumber);
+        if (connectedPort) {
+            // Auto-select
+            onRightBuildingSelect(connectedPort.building)
+            onRightCabinetSelect(connectedPort.cabinet)
+            onCableSelect(connectedPort.cable.uid);
+            onRightPortSelect(connectedPort.portNumber);
+            onFiberSelect(connectedPort.fiber);
+        }
     };
 
     const handleRightPortSelect = (portNumber) => {
-        setSelectedRightPort(prevPort => prevPort === portNumber ? null : portNumber);
+        onRightPortSelect(portNumber);
+
+        // Find connected port (works for any port, any cable)
+        const connectedPort = findConnectedPort(rightCabinetObj, portNumber);
+        if (connectedPort) {
+            // Auto-select
+            onLeftBuildingSelect(connectedPort.building)
+            onLeftCabinetSelect(connectedPort.cabinet)
+            onCableSelect(connectedPort.cable.uid);
+            onLeftPortSelect(connectedPort.portNumber);
+            onFiberSelect(connectedPort.fiber);
+        }
     };
+
 
     // Check if cabinet should display ports
     const shouldDisplayPorts = (cabinetObj) => {
@@ -293,22 +402,17 @@ function BoxDisplay({
 
         return filteredCabinets.map(cab => cab.identifier);
     };
+    const handleCableSelect = (cable) => {
+        onLeftPortSelect(null);
+        onRightPortSelect(null);
+        onFiberSelect(null);
+        if (cable?.uid === selectedCable) {
+            onCableSelect(null);
+        }
+        else
+            onCableSelect(cable.uid);
+    }
 
-    // Add this debug logging right before the cable SVG in BoxDisplay:
-    console.log('🔍 Cable display debug:');
-    console.log('  leftBuilding:', leftBuilding);
-    console.log('  rightBuilding:', rightBuilding);
-    console.log('  selectedLeftCabinet:', selectedLeftCabinet);
-    console.log('  selectedRightCabinet:', selectedRightCabinet);
-    console.log('  leftCabinetObj:', leftCabinetObj);
-    console.log('  rightCabinetObj:', rightCabinetObj);
-    console.log('  displayedCables:', displayedCables);
-    console.log('  displayedCables.length:', displayedCables.length);
-
-    // Current condition:
-    const showCables = ((leftBuilding && rightBuilding && !selectedLeftCabinet && !selectedRightCabinet) ||
-        (leftCabinetObj && rightCabinetObj)) && displayedCables.length > 0;
-    console.log('  showCables:', showCables);
 
     return (
         <div className="cable-display">
@@ -339,6 +443,7 @@ function BoxDisplay({
                                         onPortSelect={handleLeftPortSelect}
                                         selectedPort={selectedLeftPort}
                                         occupiedPorts={leftOccupiedPorts}
+                                        cablePorts={leftCablePorts}
                                         side="left"
                                     />
                                 </div>
@@ -379,7 +484,7 @@ function BoxDisplay({
                                     strokeWidth="8"
                                     onMouseEnter={() => setHoveredCableId(cable.uid)}
                                     onMouseLeave={() => setHoveredCableId(null)}
-                                    onClick={() => onCableSelect(cable.uid)}
+                                    onClick={() => handleCableSelect(cable)}
                                     style={{ cursor: 'pointer' }}
                                 />
 
@@ -435,6 +540,7 @@ function BoxDisplay({
                                         onPortSelect={handleRightPortSelect}
                                         selectedPort={selectedRightPort}
                                         occupiedPorts={rightOccupiedPorts}
+                                        cablePorts={rightCablePorts}
                                         side="right"
                                     />
                                 </div>
@@ -464,8 +570,8 @@ function BoxDisplay({
                                 onClick={() => {
                                     // Here you would implement the port connection logic
                                     // Reset selections after connection
-                                    setSelectedLeftPort(null);
-                                    setSelectedRightPort(null);
+                                    onLeftPortSelect(null);
+                                    onRightPortSelect(null);
                                 }}
                             >
                                 צור חיבור

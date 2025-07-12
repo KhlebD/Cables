@@ -1,16 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import BuildingGrid from './BuildingGrid';
 import BuildingConnections from './BuildingConnections';
-import CableDisplay from './CablesDisplay';
 import FiberDisplay from './FiberDisplay';
 import Store from './Store';
 import BoxDisplay from './BoxDisplay';
 
 export default function App() {
     const fetchNetwork = Store(state => state.fetchNetwork);
-    const loading = Store(state => state.loading);
-    const error = Store(state => state.error);
-    const buildings = Store(state => state.buildings);
     
     const [selectedGridBuilding, setSelectedGridBuilding] = useState(null);
     const [selectedConnectBuilding, setSelectedConnectBuilding] = useState(null);
@@ -18,6 +13,8 @@ export default function App() {
     const [selectedConnectCabinet, setSelectedConnectCabinet] = useState(null);
     const [selectedCable, setSelectedCable] = useState(null);
     const [selectedFiber, setSelectedFiber] = useState(null);
+    const [selectedLeftPort, setSelectedLeftPort] = useState(null);
+    const [selectedRightPort, setSelectedRightPort] = useState(null);
     
     useEffect(() => {
         fetchNetwork().then(result => {
@@ -25,56 +22,6 @@ export default function App() {
             console.error('❌ fetchNetwork error:', err);
         });
     }, []); // Empty dependency array - only run once on mount
-
-    // Show loading state
-    if (loading) {
-        return (
-            <div className="app-container">
-                <div style={{ 
-                    display: 'flex', 
-                    justifyContent: 'center', 
-                    alignItems: 'center', 
-                    height: '100vh',
-                    fontSize: '18px'
-                }}>
-                    טוען נתוני רשת...
-                </div>
-            </div>
-        );
-    }
-
-    // Show error state
-    if (error) {
-        return (
-            <div className="app-container">
-                <div style={{ 
-                    display: 'flex', 
-                    flexDirection: 'column',
-                    justifyContent: 'center', 
-                    alignItems: 'center', 
-                    height: '100vh',
-                    color: 'red'
-                }}>
-                    <h2>שגיאה בטעינת הנתונים</h2>
-                    <p>{error}</p>
-                    <button 
-                        onClick={() => fetchNetwork()}
-                        style={{
-                            padding: '10px 20px',
-                            backgroundColor: '#2196F3',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer'
-                        }}
-                    >
-                        נסה שוב
-                    </button>
-                </div>
-            </div>
-        );
-    }
-
 
     return (
         <div className="app-container">
@@ -88,6 +35,9 @@ export default function App() {
                         onCabinetSelect={setSelectedGridCabinet}
                         filterBy={selectedConnectBuilding}
                         filterByCabinet={selectedConnectCabinet}
+                        onLeftPortSelect={setSelectedLeftPort}
+                        onRightPortSelect={setSelectedRightPort}
+                        onFiberSelect= {setSelectedFiber}
                     />
                 </div>
                 <div className="right-section">
@@ -99,6 +49,9 @@ export default function App() {
                         onCabinetSelect={setSelectedConnectCabinet}
                         filterBy={selectedGridBuilding}
                         filterByCabinet={selectedGridCabinet}
+                        onLeftPortSelect={setSelectedLeftPort}
+                        onRightPortSelect={setSelectedRightPort}
+                        onFiberSelect= {setSelectedFiber}
                     />
                 </div>
             </div>
@@ -110,11 +63,20 @@ export default function App() {
                     onCableSelect={setSelectedCable}
                     selectedLeftCabinet={selectedGridCabinet}  
                     selectedRightCabinet={selectedConnectCabinet}
+                    selectedLeftPort = {selectedLeftPort}
+                    selectedRightPort = {selectedRightPort}
+                    onLeftBuildingSelect = {setSelectedGridBuilding}
+                    onRightBuildingSelect = {setSelectedConnectBuilding}
+                    onLeftCabinetSelect = {setSelectedGridCabinet}
+                    onRightCabinetSelect = {setSelectedConnectCabinet}
+                    onLeftPortSelect = {setSelectedLeftPort}
+                    onRightPortSelect = {setSelectedRightPort}
+                    onFiberSelect= {setSelectedFiber}
                 />
                 <FiberDisplay
                     selectedCable={selectedCable}
                     selectedFiber={selectedFiber}
-                    onFiberClick={setSelectedFiber}
+                    onFiberSelect={setSelectedFiber}
                 />
             </div>
         </div>

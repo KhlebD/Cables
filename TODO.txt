@@ -1,2 +1,2 @@
-1. Cabinet and panel distinction V
-2. Panel visualization
+Panel visualization:
+

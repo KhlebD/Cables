@@ -5,7 +5,7 @@ import RemoveButton from './RemoveButton';
 import EditButton from './EditButton';
 import './styles.css';
 
-const BuildingGrid = ({ connectedBuildings, onBuildingSelect, onCableSelect, onCabinetSelect, selectedBuilding }) => {
+const BuildingGrid = ({ connectedBuildings, onBuildingSelect, onCableSelect, onCabinetSelect, onLeftPortSelect, onRightPortSelect, onFiberSelect, selectedBuilding }) => {
 
     const buildings = Store(state => state.buildings);
     const updateBuildingOrder = Store(state => state.updateBuildingOrder);
@@ -81,6 +81,10 @@ const BuildingGrid = ({ connectedBuildings, onBuildingSelect, onCableSelect, onC
     const handleBuildingClick = (buildingName) => {
         if (!isDragging) {
             onCabinetSelect(null);
+            onCableSelect(null);
+            onFiberSelect(null);
+            onLeftPortSelect(null);
+            onRightPortSelect(null);
             if (selectedBuilding !== buildingName) {
                 onBuildingSelect(buildingName);
                 onCableSelect(null);

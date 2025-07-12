@@ -5,6 +5,7 @@ const PortGrid = ({
     onPortSelect,
     selectedPort,
     occupiedPorts = [],
+    cablePorts= [],  
     side = 'left' // 'left' or 'right' for styling purposes
 }) => {
     const getPortLayout = (count) => {
@@ -53,7 +54,10 @@ const PortGrid = ({
             onPortSelect(portNumber);
         }
     };
-
+    
+    const isPortInSelectedCable = (portNumber) => {
+        return cablePorts.includes(portNumber);
+    };
     const layout = getPortLayout(portCount);
    
     // Create grid of ports
@@ -73,7 +77,8 @@ const PortGrid = ({
                 const portClasses = [
                     'port-circle',
                     isOccupied ? 'port-occupied' : 'port-free',
-                    isSelected ? 'port-selected' : ''
+                    isSelected ? 'port-selected' : '',
+                    isPortInSelectedCable(portNumber) ? 'port-cable-selected' : ''
                 ].filter(Boolean).join(' ');
                
                 ports.push(

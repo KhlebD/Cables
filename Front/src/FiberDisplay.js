@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import Store from './Store';
 
-const FiberDisplay = ({ selectedCable, selectedFiber, onFiberClick }) => {
+const FiberDisplay = ({ selectedCable, selectedFiber, onFiberSelect }) => {
     const [hoveredFiberId, setHoveredFiberId] = useState(null);
     const [editingFiber, setEditingFiber] = useState(null);
     const buildings = Store(state => state.buildings);
@@ -38,8 +38,8 @@ const FiberDisplay = ({ selectedCable, selectedFiber, onFiberClick }) => {
     }, [buildings, selectedCable]);
 
 
-    const handleFiberClick = (selectedFiber) => {
-        onFiberClick(selectedFiber);
+    const handleFiberSelect = (selectedFiber) => {
+        onFiberSelect(selectedFiber);
         setEditingFiber(selectedFiber.number_cabinet1);
     };
 
@@ -53,7 +53,6 @@ const FiberDisplay = ({ selectedCable, selectedFiber, onFiberClick }) => {
         const startX = viewportWidth * 0.05;
         return startX + spacing * (adjustedIndex + 1);
     };
-
     return (
         <div className="fiber-display">
             {selectedCable && (
@@ -105,11 +104,14 @@ const FiberDisplay = ({ selectedCable, selectedFiber, onFiberClick }) => {
                                                 y1={baseY + 20}
                                                 x2={getFiberPosition(index, fibers.length)}
                                                 y2={baseY + 220}
-                                                stroke={fiber === selectedFiber ? '#339cff' : (fiber.network ? 'blue' : '#808080')}
-                                                strokeWidth="14"
+                                                stroke={
+                                                    (selectedFiber && fiber.number_cabinet1 === selectedFiber.number_cabinet1)
+                                                        ? '#339cff'
+                                                        : (fiber.network ? 'blue' : '#808080')
+                                                } strokeWidth="14"
                                                 onMouseEnter={() => setHoveredFiberId(fiber.number_cabinet1)}
                                                 onMouseLeave={() => setHoveredFiberId(null)}
-                                                onClick={() => handleFiberClick(fiber)}
+                                                onClick={() => handleFiberSelect(fiber)}
                                                 style={{ cursor: 'pointer' }}
                                             />
                                             {/* Top number (Cabinet 1) */}
