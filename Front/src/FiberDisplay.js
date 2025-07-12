@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import Store from './Store';
 
-const FiberDisplay = ({ selectedCable, selectedFiber, onFiberSelect }) => {
+const FiberDisplay = ({ selectedCable, selectedFiber, onFiberSelect, onLeftPortSelect, onRightPortSelect }) => {
     const [hoveredFiberId, setHoveredFiberId] = useState(null);
     const [editingFiber, setEditingFiber] = useState(null);
     const buildings = Store(state => state.buildings);
@@ -40,6 +40,13 @@ const FiberDisplay = ({ selectedCable, selectedFiber, onFiberSelect }) => {
 
     const handleFiberSelect = (selectedFiber) => {
         onFiberSelect(selectedFiber);
+        // Auto-select the ports connected to this fiber
+        if (onLeftPortSelect && selectedFiber.port_cabinet1) {
+            onLeftPortSelect(parseInt(selectedFiber.port_cabinet1));
+        }
+        if (onRightPortSelect && selectedFiber.port_cabinet2) {
+            onRightPortSelect(parseInt(selectedFiber.port_cabinet2));
+        }
         setEditingFiber(selectedFiber.number_cabinet1);
     };
 

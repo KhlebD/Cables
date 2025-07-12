@@ -77,6 +77,8 @@ export default function App() {
                     selectedCable={selectedCable}
                     selectedFiber={selectedFiber}
                     onFiberSelect={setSelectedFiber}
+                    onLeftPortSelect = {setSelectedLeftPort}
+                    onRightPortSelect = {setSelectedRightPort}
                 />
             </div>
         </div>
