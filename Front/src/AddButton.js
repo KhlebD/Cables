@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
-import './styles.css'; 
+import './styles.css';
 
-function AddButton({ itemType, fields, onAdd, initialValues = {} }){
+function AddButton({ itemType, fields, onAdd, initialValues = {} }) {
     const [isPopupOpen, setIsPopupOpen] = useState(false);
     const [formData, setFormData] = useState(initialValues);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     const formRef = useRef(null);
     const buttonRef = useRef(null);
-    
+
     // Store the previous initialValues to detect meaningful changes
     const prevInitialValuesRef = useRef(initialValues);
 
@@ -25,7 +25,7 @@ function AddButton({ itemType, fields, onAdd, initialValues = {} }){
     useEffect(() => {
         // Only update if initialValues actually changed (deep comparison for key fields)
         const hasChanged = JSON.stringify(prevInitialValuesRef.current) !== JSON.stringify(initialValues);
-        
+
         if (hasChanged) {
             setFormData(initialValues);
             prevInitialValuesRef.current = initialValues;
@@ -36,8 +36,8 @@ function AddButton({ itemType, fields, onAdd, initialValues = {} }){
     useEffect(() => {
         const handleClickOutside = (e) => {
             // If the form is open and the click is outside both the form and the button
-            if (isPopupOpen && formRef.current && buttonRef.current && 
-                !formRef.current.contains(e.target) && 
+            if (isPopupOpen && formRef.current && buttonRef.current &&
+                !formRef.current.contains(e.target) &&
                 !buttonRef.current.contains(e.target)) {
                 setIsPopupOpen(false);
             }
@@ -69,11 +69,11 @@ function AddButton({ itemType, fields, onAdd, initialValues = {} }){
         }
     };
 
-     // Get options for a field
-     const getFieldOptions = (field) => {
-        if (typeof field.options === 'function') 
+    // Get options for a field
+    const getFieldOptions = (field) => {
+        if (typeof field.options === 'function')
             return field.options(formData);
-        
+
         return field.options;
     };
 
@@ -97,19 +97,19 @@ function AddButton({ itemType, fields, onAdd, initialValues = {} }){
 
     return (
         <div className="add-building-container">
-            <button 
+            <button
                 ref={buttonRef}
                 className="add-button"
                 onClick={() => setIsPopupOpen(!isPopupOpen)}
             >
-                הוסף {itemType}  
+                {itemType.includes('רשת') ? 'עדכן' : 'הוסף'} {itemType}
             </button>
 
             {isPopupOpen && (
                 <div className="form-popup">
                     <form ref={formRef} onSubmit={handleSubmit} className="form">
-                        <h3>הוסף {itemType}</h3>
-                        
+                        <h3>{itemType.includes('רשת') ? 'עדכן' : 'הוסף'} {itemType}</h3>
+
                         {fields.map(field => (
                             <div key={field.name} className="form-group">
                                 <label>{field.label}</label>
@@ -145,8 +145,8 @@ function AddButton({ itemType, fields, onAdd, initialValues = {} }){
                             <button type="submit" className="submit-button">
                                 הוסף {itemType}
                             </button>
-                            <button 
-                                type="button" 
+                            <button
+                                type="button"
                                 className="cancel-button"
                                 onClick={() => setIsPopupOpen(false)}
                             >

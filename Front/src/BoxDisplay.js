@@ -24,7 +24,6 @@ function BoxDisplay({
 }) {
     const buildings = Store(state => state.buildings);
     const [hoveredCableId, setHoveredCableId] = useState(null);
-
     // Get cabinet objects from identifiers
     const leftCabinetObj = useMemo(() => {
         if (!selectedLeftCabinet || !leftBuilding) return null;
@@ -119,8 +118,12 @@ function BoxDisplay({
             }) || [];
         }
 
-        // Mode 2: Two cabinets selected - show cables between them
+
         if (leftCabinetObj && rightCabinetObj) {
+            if (leftCabinetObj.identifier === rightCabinetObj.identifier) {
+                return [];
+            }
+
             const cables = [];
 
             // Check cables from left cabinet to right cabinet
@@ -495,7 +498,7 @@ function BoxDisplay({
                                     textAnchor="middle"
                                     className="cable-label"
                                 >
-                                    {`כבל ${cable.number} (${cable.num_of_fibers} סיבים)`}
+                                    {`${cable.num_of_fibers === 1 ? 'סיב' : 'כבל'} ${cable.number} (${cable.num_of_fibers} סיבים)`}
                                 </text>
                             </g>
                         ))}
@@ -565,17 +568,46 @@ function BoxDisplay({
                             <span>פורט ימין: {selectedRightPort || 'לא נבחר'}</span>
                         </div>
                         {selectedLeftPort && selectedRightPort && (
-                            <button
-                                className="create-connection-button"
-                                onClick={() => {
-                                    // Here you would implement the port connection logic
+                            <AddButton
+                                itemType="חיבור סיב"
+                                initialValues={{
+                                    cabinet1: leftCabinetObj.identifier,
+                                    cabinet2: rightCabinetObj.identifier,
+                                    cabinet1_start: selectedLeftPort,
+                                    cabinet2_start: selectedRightPort,
+                                    num_of_fibers: 1
+                                }}
+                                fields={[
+                                    {
+                                        name: 'number',
+                                        label: 'שם החיבור',
+                                        type: 'text',
+                                        required: true,
+                                        placeholder: 'הכנס שם לחיבור הסיב'
+                                    },
+                                    {
+                                        name: 'cable_type',
+                                        label: 'סוג סיב',
+                                        type: 'select',
+                                        required: true,
+                                        options: ['Single', 'Multi']
+                                    }
+                                ]}
+                                onAdd={async (formData) => {
+                                    await Store.getState().addCable(
+                                        leftCabinetObj.identifier,
+                                        rightCabinetObj.identifier,
+                                        formData.number,
+                                        1, // Always 1 fiber for individual connections
+                                        formData.cable_type,
+                                        selectedLeftPort,
+                                        selectedRightPort
+                                    );
                                     // Reset selections after connection
                                     onLeftPortSelect(null);
                                     onRightPortSelect(null);
                                 }}
-                            >
-                                צור חיבור
-                            </button>
+                            />
                         )}
                     </div>
                 )}
@@ -619,7 +651,7 @@ function BoxDisplay({
                                 label: 'מספר סיבים',
                                 type: 'select',
                                 required: true,
-                                options: ['6', '12', '24', '48']
+                                options: ['6', '12']
                             },
                             {
                                 name: 'cable_type',
@@ -665,6 +697,24 @@ function BoxDisplay({
                         }}
                     />
                 )}
+                {selectedCable && (
+                    <AddButton
+                        itemType="רשת לכבל"
+                        fields={[
+                            {
+                                name: 'network',
+                                label: 'שם הרשת',
+                                type: 'text',
+                                required: true,
+                                placeholder: 'הכנס שם רשת לכל הסיבים'
+                            }
+                        ]}
+                        onAdd={async (formData) => {
+                            await Store.getState().updateCableNetworks(selectedCable, formData.network);
+                        }}
+                    />
+                )}
+
             </div>
         </div>
     );

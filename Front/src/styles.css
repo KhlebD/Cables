@@ -326,6 +326,7 @@ ul {
     transition: stroke-width 0.2s;  /* Smooth transition for width change */
 }
 
+
 /* NAV BUTTONS */
 .navigation-buttons {
     display: flex;
@@ -1336,8 +1337,8 @@ ul {
     animation: port-pulse 1s infinite alternate;
 }
 .port-circle.port-cable-selected {
-    box-shadow: 0 0 0 3px blue;
-    border: 1px solid blue ;
+    box-shadow: 0 0 0 1px blue;
+    border: 2px solid blue ;
 }
 
 @keyframes port-pulse {

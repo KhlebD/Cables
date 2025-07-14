@@ -201,9 +201,7 @@ def get_network():
                         "status": port["status"]
                     })
                 
-                # Get cables connected to this cabinet
-                print(f"🔍 Getting cables for cabinet: {cabinet['identifier']}")
-                
+                # Get cables connected to this cabinet                
                 cursor.execute('''
                 SELECT id, cableid, number, num_of_fibers, cable_type, cabinet1, cabinet2, 
                        cabinet1_start, cabinet2_start 
@@ -954,6 +952,9 @@ def auto_assign_fibers_endpoint():
             cabinet2_ports_needed = list(range(cabinet2_start, cabinet2_start + num_fibers))
             
             # Check if all required ports are available in cabinet1
+            print(f"🔍 Checking port availability for cable {cable_id}:")
+            print(f"  📍 Cabinet1: {cabinet1}, needs ports {cabinet1_ports_needed}")
+            print(f"  📍 Cabinet2: {cabinet2}, needs ports {cabinet2_ports_needed}")
             cursor.execute('''
                 SELECT port_number FROM ports 
                 WHERE cabinet_id = %s AND port_number = ANY(%s) AND status != 'available'
@@ -966,7 +967,7 @@ def auto_assign_fibers_endpoint():
                 return jsonify({
                     'error': f'Ports {occupied_ports_cab1} in cabinet {cabinet1} are already occupied'
                 }), 400
-            
+
             # Check if all required ports are available in cabinet2
             cursor.execute('''
                 SELECT port_number FROM ports 
@@ -982,6 +983,14 @@ def auto_assign_fibers_endpoint():
                 }), 400
             
             # Check if all required ports exist (in case cabinet doesn't have enough ports)
+            print(f"🔍 Checking if required ports exist...")
+            cursor.execute('''
+                SELECT port_number FROM ports 
+                WHERE cabinet_id = %s 
+                ORDER BY port_number
+            ''', (cabinet1,))
+            existing_ports_cab1 = [row['port_number'] for row in cursor.fetchall()]
+            print(f"  📊 Cabinet {cabinet1} has ports: {existing_ports_cab1}")
             cursor.execute('''
                 SELECT COUNT(*) as count FROM ports 
                 WHERE cabinet_id = %s AND port_number = ANY(%s)
@@ -1058,7 +1067,33 @@ def auto_assign_fibers_endpoint():
         conn.rollback()
         conn.close()
         return jsonify({'error': str(e)}), 500
+@app.route('/cables/update-networks', methods=['POST'])
+def update_cable_networks():
+    data = request.get_json()
+    cable_uid = data.get('cableUID')
+    network = data.get('network')
     
+    if not cable_uid:
+        return jsonify({'error': 'Cable UID required'}), 400
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute(
+            'UPDATE fibers SET network = %s WHERE cable_id = %s',
+            (network, cable_uid)
+        )
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({'message': f'Updated network for all fibers in cable {cable_uid}'}), 200
+        
+    except Exception as e:
+        conn.rollback()
+        conn.close()
+        return jsonify({'error': str(e)}), 500
     
 if __name__ == "__main__":
     init_db()

@@ -478,6 +478,52 @@ const Store = create((set, get) => ({
             return { success: false, error: error.message };
         }
     },
+    updateCableNetworks: async (cableUID, networkName) => {
+        const previousState = get().buildings;
+
+        // Optimistic update - update all fibers in the cable
+        set((state) => ({
+            buildings: state.buildings.map(building => ({
+                ...building,
+                cabinets: building.cabinets?.map(cabinet => ({
+                    ...cabinet,
+                    cables: cabinet.cables?.map(cable =>
+                        cable.uid === cableUID
+                            ? {
+                                ...cable,
+                                fibers: cable.fibers?.map(fiber => ({
+                                    ...fiber,
+                                    network: networkName
+                                }))
+                            }
+                            : cable
+                    )
+                }))
+            }))
+        }));
+
+        try {
+            const response = await fetch('http://localhost:5001/cables/update-networks', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    cableUID,
+                    network: networkName
+                })
+            });
+
+            if (!response.ok) {
+                set({ buildings: previousState });
+                return { success: false };
+            }
+
+            return { success: true };
+        } catch (error) {
+            set({ buildings: previousState });
+            console.error('Error updating cable networks:', error);
+            return { success: false, error: error.message };
+        }
+    },
 }));
 
 
