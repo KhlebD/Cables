@@ -224,23 +224,7 @@ const Store = create((set, get) => ({
                 }))
             }));
 
-            // Auto-assign ports for the new cable
-            try {
-                const assignResponse = await fetch('http://localhost:5001/ports/auto-assign', {
-                    method: 'POST'
-                });
-
-                if (assignResponse.ok) {
-                    // Refresh data to get port assignments
-                    await get().fetchNetwork();
-                } else {
-                    const errorData = await assignResponse.json();
-                    console.warn('Port assignment failed:', errorData.error);
-                }
-            } catch (assignError) {
-                console.warn('Port auto-assignment failed:', assignError);
-            }
-
+            await get().fetchNetwork();
             return { success: true };
 
         } catch (error) {
@@ -264,7 +248,6 @@ const Store = create((set, get) => ({
                 return { success: false };
             }
 
-            // Fetch
             return { success: true };
 
         } catch (error) {

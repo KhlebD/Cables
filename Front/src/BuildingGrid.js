@@ -78,19 +78,19 @@ const BuildingGrid = ({ connectedBuildings, onBuildingSelect, onCableSelect, onC
         });
     };
 
-    const handleBuildingClick = (buildingName) => {
+    const handleBuildingSelect = (buildingName) => {
         if (!isDragging) {
             onCabinetSelect(null);
             onCableSelect(null);
             onFiberSelect(null);
             onLeftPortSelect(null);
             onRightPortSelect(null);
+            onCableSelect(null);
             if (selectedBuilding !== buildingName) {
                 onBuildingSelect(buildingName);
-                onCableSelect(null);
             } else {
                 onBuildingSelect(null);
-                onCableSelect(null);
+
             }
         }
     };
@@ -246,7 +246,7 @@ const BuildingGrid = ({ connectedBuildings, onBuildingSelect, onCableSelect, onC
                     {getCurrentBuildings().map((building) => (
                         <div
                             key={building.name}
-                            onClick={() => handleBuildingClick(building.name)}
+                            onClick={() => handleBuildingSelect(building.name)}
                             className={`building-item 
                                 ${selectedBuilding === building.name ? 'selected' : ''} 
                                 ${connectedBuildings?.includes(building.name) ? 'connected' : ''}

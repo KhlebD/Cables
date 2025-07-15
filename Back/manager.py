@@ -398,31 +398,107 @@ def add_cable():
     cursor = conn.cursor()
     
     try:
-        # Add cable
+        print(f"🔄 Creating cable {cable_id} with port validation...")
+        
+        # Calculate required port ranges
+        num_fibers = int(num_of_fibers)
+        cabinet1_ports_needed = list(range(int(cabinet1_start), int(cabinet1_start) + num_fibers))
+        cabinet2_ports_needed = list(range(int(cabinet2_start), int(cabinet2_start) + num_fibers))
+        
+        print(f"   🎯 Cabinet1 {cabinet1} needs ports: {cabinet1_ports_needed}")
+        print(f"   🎯 Cabinet2 {cabinet2} needs ports: {cabinet2_ports_needed}")
+        
+        # Check if all required ports are available in cabinet1
+        cursor.execute('''
+            SELECT port_number FROM ports 
+            WHERE cabinet_id = %s AND port_number = ANY(%s) AND status != 'available'
+        ''', (cabinet1, cabinet1_ports_needed))
+        occupied_ports_cab1 = [row[0] for row in cursor.fetchall()]
+        
+        if occupied_ports_cab1:
+            return jsonify({
+                'error': f'Ports {occupied_ports_cab1} in cabinet {cabinet1} are already occupied'
+            }), 400
+        
+        # Check if all required ports are available in cabinet2
+        cursor.execute('''
+            SELECT port_number FROM ports 
+            WHERE cabinet_id = %s AND port_number = ANY(%s) AND status != 'available'
+        ''', (cabinet2, cabinet2_ports_needed))
+        occupied_ports_cab2 = [row[0] for row in cursor.fetchall()]
+        
+        if occupied_ports_cab2:
+            return jsonify({
+                'error': f'Ports {occupied_ports_cab2} in cabinet {cabinet2} are already occupied'
+            }), 400
+        
+        # Check if all required ports exist in cabinet1
+        cursor.execute('''
+            SELECT COUNT(*) as count FROM ports 
+            WHERE cabinet_id = %s AND port_number = ANY(%s)
+        ''', (cabinet1, cabinet1_ports_needed))
+        if cursor.fetchone()[0] != num_fibers:
+            return jsonify({
+                'error': f'Cabinet {cabinet1} does not have all required ports {cabinet1_ports_needed}'
+            }), 400
+            
+        # Check if all required ports exist in cabinet2
+        cursor.execute('''
+            SELECT COUNT(*) as count FROM ports 
+            WHERE cabinet_id = %s AND port_number = ANY(%s)
+        ''', (cabinet2, cabinet2_ports_needed))
+        if cursor.fetchone()[0] != num_fibers:
+            return jsonify({
+                'error': f'Cabinet {cabinet2} does not have all required ports {cabinet2_ports_needed}'
+            }), 400
+        
+        print("✅ All port validations passed")
+        
+        # Create cable
         cursor.execute(
             '''INSERT INTO cables (cableID, number, num_of_fibers, cable_type, cabinet1, cabinet2, cabinet1_start, cabinet2_start) 
                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)''',
             (cable_id, number, num_of_fibers, cable_type, cabinet1, cabinet2, cabinet1_start, cabinet2_start)
         )
         
-        # Add fibers
-        for i in range(int(num_of_fibers)):
+        # Create fibers and assign ports immediately
+        for i in range(num_fibers):
+            fiber_cab1_number = int(cabinet1_start) + i
+            fiber_cab2_number = int(cabinet2_start) + i
+            port1_number = int(cabinet1_start) + i
+            port2_number = int(cabinet2_start) + i
+            
+            # Get port IDs
+            cursor.execute('SELECT id FROM ports WHERE cabinet_id = %s AND port_number = %s', 
+                         (cabinet1, port1_number))
+            port1_id = cursor.fetchone()[0]
+            
+            cursor.execute('SELECT id FROM ports WHERE cabinet_id = %s AND port_number = %s', 
+                         (cabinet2, port2_number))
+            port2_id = cursor.fetchone()[0]
+            
+            # Create fiber with port assignments
             cursor.execute(
-                '''INSERT INTO fibers (number_cabinet1, number_cabinet2, fiber_type, cable_id) 
-                   VALUES (%s, %s, %s, %s)''',
-                (int(cabinet1_start) + i, int(cabinet2_start) + i, "0", cable_id)
+                '''INSERT INTO fibers (number_cabinet1, number_cabinet2, fiber_type, cable_id, port_cabinet1_id, port_cabinet2_id) 
+                   VALUES (%s, %s, %s, %s, %s, %s)''',
+                (fiber_cab1_number, fiber_cab2_number, "0", cable_id, port1_id, port2_id)
             )
+            
+            # Mark ports as occupied
+            cursor.execute('UPDATE ports SET status = %s WHERE id IN (%s, %s)', 
+                         ('occupied', port1_id, port2_id))
         
         conn.commit()
-        conn.close()
+        print(f"✅ Cable {cable_id} created with {num_fibers} fibers and ports assigned")
         
-        return jsonify({"message": "Cable and fibers added successfully"}), 200
+        return jsonify({"message": "Cable and fibers created with ports assigned successfully"}), 200
         
     except Exception as e:
         conn.rollback()
-        conn.close()
+        print(f"❌ Error creating cable: {e}")
         return jsonify({'error': str(e)}), 500
-
+    finally:
+        conn.close()
 # REMOVERS
 @app.route('/buildings/remove/<building_name>', methods=['DELETE'])
 def remove_building(building_name):
@@ -909,164 +985,122 @@ def update_cabinet_ports(cabinet_id):
         conn.close()
         return jsonify({'error': str(e)}), 500
 
-@app.route('/ports/auto-assign', methods=['POST'])
-def auto_assign_fibers_endpoint():
+@app.route('/ports/migrate-existing-cables', methods=['POST'])
+def migrate_existing_cables():
+    print("🔄 Starting one-time migration for existing cables...")
     conn = get_db_connection()
     cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
     
     try:
-        # Get all fibers that don't have port assignments
+        # Get all cables with unassigned fibers
         cursor.execute('''
-            SELECT f.id, f.cable_id, c.cabinet1, c.cabinet2, f.number_cabinet1, f.number_cabinet2,
-                   c.cabinet1_start, c.cabinet2_start, c.num_of_fibers
-            FROM fibers f
-            JOIN cables c ON f.cable_id = c.cableid
+            SELECT DISTINCT c.cableid, c.cabinet1, c.cabinet2, c.cabinet1_start, c.cabinet2_start, c.num_of_fibers
+            FROM cables c
+            JOIN fibers f ON c.cableid = f.cable_id
             WHERE f.port_cabinet1_id IS NULL OR f.port_cabinet2_id IS NULL
-            ORDER BY f.cable_id, f.number_cabinet1
+            ORDER BY c.cableid
         ''')
-        fibers = cursor.fetchall()
+        cables_to_migrate = cursor.fetchall()
+        
+        print(f"🔍 Found {len(cables_to_migrate)} cables needing migration")
+        
+        if len(cables_to_migrate) == 0:
+            return jsonify({'message': 'No cables need migration'}), 200
         
         assignments_made = 0
+        failed_cables = []
         
-        # Group fibers by cable to process each cable together
-        cables_processed = set()
-        
-        for fiber in fibers:
-            cable_id = fiber['cable_id']
+        for cable in cables_to_migrate:
+            cable_id = cable['cableid']
+            cabinet1 = cable['cabinet1']
+            cabinet2 = cable['cabinet2']
+            cabinet1_start = cable['cabinet1_start']
+            cabinet2_start = cable['cabinet2_start']
+            num_fibers = cable['num_of_fibers']
             
-            # Skip if we already processed this cable
-            if cable_id in cables_processed:
-                continue
-                
-            cables_processed.add(cable_id)
-            cabinet1 = fiber['cabinet1']
-            cabinet2 = fiber['cabinet2']
-            cabinet1_start = fiber['cabinet1_start']
-            cabinet2_start = fiber['cabinet2_start']
-            num_fibers = fiber['num_of_fibers']
-            
-            print(f"🔄 Processing cable {cable_id}: {cabinet1} ports {cabinet1_start}-{cabinet1_start + num_fibers - 1} ↔ {cabinet2} ports {cabinet2_start}-{cabinet2_start + num_fibers - 1}")
+            print(f"🔄 Migrating cable {cable_id}...")
             
             # Calculate required port ranges
             cabinet1_ports_needed = list(range(cabinet1_start, cabinet1_start + num_fibers))
             cabinet2_ports_needed = list(range(cabinet2_start, cabinet2_start + num_fibers))
             
-            # Check if all required ports are available in cabinet1
-            print(f"🔍 Checking port availability for cable {cable_id}:")
-            print(f"  📍 Cabinet1: {cabinet1}, needs ports {cabinet1_ports_needed}")
-            print(f"  📍 Cabinet2: {cabinet2}, needs ports {cabinet2_ports_needed}")
+            # Check port availability (same logic as above)
             cursor.execute('''
                 SELECT port_number FROM ports 
                 WHERE cabinet_id = %s AND port_number = ANY(%s) AND status != 'available'
             ''', (cabinet1, cabinet1_ports_needed))
             occupied_ports_cab1 = [row['port_number'] for row in cursor.fetchall()]
             
-            if occupied_ports_cab1:
-                conn.rollback()
-                conn.close()
-                return jsonify({
-                    'error': f'Ports {occupied_ports_cab1} in cabinet {cabinet1} are already occupied'
-                }), 400
-
-            # Check if all required ports are available in cabinet2
             cursor.execute('''
                 SELECT port_number FROM ports 
                 WHERE cabinet_id = %s AND port_number = ANY(%s) AND status != 'available'
             ''', (cabinet2, cabinet2_ports_needed))
             occupied_ports_cab2 = [row['port_number'] for row in cursor.fetchall()]
             
-            if occupied_ports_cab2:
-                conn.rollback()
-                conn.close()
-                return jsonify({
-                    'error': f'Ports {occupied_ports_cab2} in cabinet {cabinet2} are already occupied'
-                }), 400
+            if occupied_ports_cab1 or occupied_ports_cab2:
+                failed_cables.append({
+                    'cable_id': cable_id,
+                    'error': f'Occupied ports - Cabinet1: {occupied_ports_cab1}, Cabinet2: {occupied_ports_cab2}'
+                })
+                print(f"❌ Skipped {cable_id} - port conflicts")
+                continue
             
-            # Check if all required ports exist (in case cabinet doesn't have enough ports)
-            print(f"🔍 Checking if required ports exist...")
+            # Assign ports to existing fibers
             cursor.execute('''
-                SELECT port_number FROM ports 
-                WHERE cabinet_id = %s 
-                ORDER BY port_number
-            ''', (cabinet1,))
-            existing_ports_cab1 = [row['port_number'] for row in cursor.fetchall()]
-            print(f"  📊 Cabinet {cabinet1} has ports: {existing_ports_cab1}")
-            cursor.execute('''
-                SELECT COUNT(*) as count FROM ports 
-                WHERE cabinet_id = %s AND port_number = ANY(%s)
-            ''', (cabinet1, cabinet1_ports_needed))
-            if cursor.fetchone()['count'] != num_fibers:
-                conn.rollback()
-                conn.close()
-                return jsonify({
-                    'error': f'Cabinet {cabinet1} does not have all required ports {cabinet1_ports_needed}'
-                }), 400
-                
-            cursor.execute('''
-                SELECT COUNT(*) as count FROM ports 
-                WHERE cabinet_id = %s AND port_number = ANY(%s)
-            ''', (cabinet2, cabinet2_ports_needed))
-            if cursor.fetchone()['count'] != num_fibers:
-                conn.rollback()
-                conn.close()
-                return jsonify({
-                    'error': f'Cabinet {cabinet2} does not have all required ports {cabinet2_ports_needed}'
-                }), 400
-            
-            # All ports are available, now assign them
-            # Get all fibers for this cable
-            cursor.execute('''
-                SELECT f.id, f.number_cabinet1, f.number_cabinet2
-                FROM fibers f
-                WHERE f.cable_id = %s
-                ORDER BY f.number_cabinet1
+                SELECT id, number_cabinet1, number_cabinet2
+                FROM fibers
+                WHERE cable_id = %s
+                ORDER BY number_cabinet1
             ''', (cable_id,))
-            cable_fibers = cursor.fetchall()
+            fibers = cursor.fetchall()
             
-            for i, cable_fiber in enumerate(cable_fibers):
-                fiber_id = cable_fiber['id']
+            for i, fiber in enumerate(fibers):
                 port1_number = cabinet1_start + i
                 port2_number = cabinet2_start + i
                 
                 # Get port IDs
-                cursor.execute('''
-                    SELECT id FROM ports 
-                    WHERE cabinet_id = %s AND port_number = %s
-                ''', (cabinet1, port1_number))
+                cursor.execute('SELECT id FROM ports WHERE cabinet_id = %s AND port_number = %s', 
+                             (cabinet1, port1_number))
                 port1_id = cursor.fetchone()['id']
                 
-                cursor.execute('''
-                    SELECT id FROM ports 
-                    WHERE cabinet_id = %s AND port_number = %s
-                ''', (cabinet2, port2_number))
+                cursor.execute('SELECT id FROM ports WHERE cabinet_id = %s AND port_number = %s', 
+                             (cabinet2, port2_number))
                 port2_id = cursor.fetchone()['id']
                 
-                # Assign fiber to ports
+                # Update fiber with port assignments
                 cursor.execute('''
                     UPDATE fibers 
                     SET port_cabinet1_id = %s, port_cabinet2_id = %s 
                     WHERE id = %s
-                ''', (port1_id, port2_id, fiber_id))
+                ''', (port1_id, port2_id, fiber['id']))
                 
                 # Mark ports as occupied
-                cursor.execute('''
-                    UPDATE ports SET status = 'occupied' 
-                    WHERE id IN (%s, %s)
-                ''', (port1_id, port2_id))
+                cursor.execute('UPDATE ports SET status = %s WHERE id IN (%s, %s)', 
+                             ('occupied', port1_id, port2_id))
                 
                 assignments_made += 1
-                print(f"✅ Assigned fiber {cable_fiber['number_cabinet1']}→{cable_fiber['number_cabinet2']} to ports {port1_number}→{port2_number}")
+            
+            print(f"✅ Migrated cable {cable_id}")
         
         conn.commit()
-        conn.close()
         
-        return jsonify({'message': f'Successfully assigned {assignments_made} fibers to their designated ports'}), 200
+        result_message = f'Migration completed! Assigned {assignments_made} fibers.'
+        if failed_cables:
+            result_message += f' {len(failed_cables)} cables failed due to port conflicts.'
+        
+        return jsonify({
+            'message': result_message,
+            'assignments_made': assignments_made,
+            'failed_cables': failed_cables
+        }), 200
         
     except Exception as e:
-        print(f"❌ Error in auto-assign: {e}")
         conn.rollback()
-        conn.close()
+        print(f"❌ Migration error: {e}")
         return jsonify({'error': str(e)}), 500
+    finally:
+        conn.close()
+    
 @app.route('/cables/update-networks', methods=['POST'])
 def update_cable_networks():
     data = request.get_json()

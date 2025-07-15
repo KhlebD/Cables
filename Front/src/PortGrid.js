@@ -49,10 +49,8 @@ const PortGrid = ({
         return selectedPort === portNumber;
     };
 
-    const handlePortClick = (portNumber) => {
-        if (onPortSelect) {
-            onPortSelect(portNumber);
-        }
+    const handlePortSelect = (portNumber) => {
+        onPortSelect(portNumber);
     };
     
     const isPortInSelectedCable = (portNumber) => {
@@ -85,7 +83,7 @@ const PortGrid = ({
                     <div
                         key={`port-${portNumber}`}
                         className={portClasses}
-                        onClick={() => handlePortClick(portNumber)}
+                        onClick={() => handlePortSelect(portNumber)}
                         style={{
                             gridRow: row + 1,
                             gridColumn: col + 1

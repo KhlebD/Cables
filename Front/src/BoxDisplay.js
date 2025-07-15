@@ -249,32 +249,46 @@ function BoxDisplay({
     };
 
     const handleLeftPortSelect = (portNumber) => {
-        onLeftPortSelect(portNumber);
+        onFiberSelect(null);
+        onCableSelect(null);
+        if (selectedLeftPort === portNumber) {
+            onLeftPortSelect(null);
 
-        // Find connected port
-        const connectedPort = findConnectedPort(leftCabinetObj, portNumber);
-        if (connectedPort) {
-            // Auto-select
-            onRightBuildingSelect(connectedPort.building)
-            onRightCabinetSelect(connectedPort.cabinet)
-            onCableSelect(connectedPort.cable.uid);
-            onRightPortSelect(connectedPort.portNumber);
-            onFiberSelect(connectedPort.fiber);
+        }
+        else {
+            onLeftPortSelect(portNumber);
+
+            // Find connected port
+            const connectedPort = findConnectedPort(leftCabinetObj, portNumber);
+            if (connectedPort) {
+                // Auto-select
+                onRightBuildingSelect(connectedPort.building)
+                onRightCabinetSelect(connectedPort.cabinet)
+                onCableSelect(connectedPort.cable.uid);
+                onRightPortSelect(connectedPort.portNumber);
+                onFiberSelect(connectedPort.fiber);
+            }
         }
     };
 
     const handleRightPortSelect = (portNumber) => {
-        onRightPortSelect(portNumber);
-
-        // Find connected port (works for any port, any cable)
-        const connectedPort = findConnectedPort(rightCabinetObj, portNumber);
-        if (connectedPort) {
-            // Auto-select
-            onLeftBuildingSelect(connectedPort.building)
-            onLeftCabinetSelect(connectedPort.cabinet)
-            onCableSelect(connectedPort.cable.uid);
-            onLeftPortSelect(connectedPort.portNumber);
-            onFiberSelect(connectedPort.fiber);
+        onFiberSelect(null);
+        onCableSelect(null);
+        if (selectedRightPort === portNumber) {
+            onRightPortSelect(null);
+        }
+        else {
+            onRightPortSelect(portNumber);
+            // Find connected port (works for any port, any cable)
+            const connectedPort = findConnectedPort(rightCabinetObj, portNumber);
+            if (connectedPort) {
+                // Auto-select
+                onLeftBuildingSelect(connectedPort.building)
+                onLeftCabinetSelect(connectedPort.cabinet)
+                onCableSelect(connectedPort.cable.uid);
+                onLeftPortSelect(connectedPort.portNumber);
+                onFiberSelect(connectedPort.fiber);
+            }
         }
     };
 
@@ -541,6 +555,8 @@ function BoxDisplay({
                                     <PortGrid
                                         portCount={rightCabinetObj.port_count}
                                         onPortSelect={handleRightPortSelect}
+                                        onCableSelect={onCableSelect}
+                                        onFiberSelect={onFiberSelect}
                                         selectedPort={selectedRightPort}
                                         occupiedPorts={rightOccupiedPorts}
                                         cablePorts={rightCablePorts}

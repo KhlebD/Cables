@@ -4,8 +4,10 @@ import Store from './Store';
 const FiberDisplay = ({ selectedCable, selectedFiber, onFiberSelect, onLeftPortSelect, onRightPortSelect }) => {
     const [hoveredFiberId, setHoveredFiberId] = useState(null);
     const [editingFiber, setEditingFiber] = useState(null);
+    const [networkInput, setNetworkInput] = useState('');
     const buildings = Store(state => state.buildings);
     const updateFiberNetwork = Store(state => state.updateFiberNetwork);
+    
 
     const { fibers, cabinet1, cabinet2 } = useMemo(() => {
         if (!selectedCable) return { fibers: [], cabinet1: null, cabinet2: null };
@@ -48,6 +50,7 @@ const FiberDisplay = ({ selectedCable, selectedFiber, onFiberSelect, onLeftPortS
             onRightPortSelect(parseInt(selectedFiber.port_cabinet2));
         }
         setEditingFiber(selectedFiber.number_cabinet1);
+        setNetworkInput(selectedFiber.network || ''); 
     };
 
     const viewportWidth = window.innerWidth;
@@ -152,17 +155,26 @@ const FiberDisplay = ({ selectedCable, selectedFiber, onFiberSelect, onLeftPortS
                                                 >
                                                     <input
                                                         type="text"
-                                                        value={fiber.network || ''}
-                                                        onChange={async (e) => {
-                                                            try {
-                                                                await updateFiberNetwork(
-                                                                    selectedCable,
-                                                                    fiber.number_cabinet1,
-                                                                    e.target.value || null
-                                                                );
+                                                        value={networkInput}
+                                                        onChange={(e) => {
+                                                            // Only update local state, don't call store yet
+                                                            setNetworkInput(e.target.value);
+                                                        }}
+                                                        onKeyDown={async (e) => {
+                                                            if (e.key === 'Enter') {
+                                                                try {
+                                                                    await updateFiberNetwork(
+                                                                        selectedCable,
+                                                                        fiber.number_cabinet1,
+                                                                        e.target.value || null
+                                                                    );
+                                                                    setEditingFiber(null);
+                                                                } catch (error) {
+                                                                    console.error('Failed to update network:', error);
+                                                                }
+                                                            }
+                                                            if (e.key === 'Escape') {
                                                                 setEditingFiber(null);
-                                                            } catch (error) {
-                                                                console.error('Failed to update network:', error);
                                                             }
                                                         }}
                                                         onBlur={() => setEditingFiber(null)}
