@@ -323,7 +323,8 @@ function BoxDisplay({
                     leftCabinetObj.cabinet_type,
                 portInfo: leftCabinetObj.port_count > 0 ?
                     `${leftCabinetObj.port_count} פורטים` : 'ללא פורטים',
-                cableCount: `${leftCabinetObj.cables?.length || 0} כבלים`
+                cableCount: leftCabinetObj.cables?.length > 0 ?
+                    `${leftCabinetObj.cables.length} כבלים` : 'ללא כבלים'
             };
         }
 
@@ -372,20 +373,6 @@ function BoxDisplay({
             };
         }
 
-        // Show targets when only left cabinet is selected
-        if (leftCabinetObj && !rightCabinetObj) {
-            const uniqueTargets = [...new Set(
-                displayedCables.map(cable =>
-                    cable.other_building ? `${cable.other_building} - ${cable.other_cabinet?.identifier}` : 'לא ידוע'
-                )
-            )];
-
-            return {
-                isTargetList: true,
-                targets: uniqueTargets
-            };
-        }
-
         return null;
     };
 
@@ -430,7 +417,6 @@ function BoxDisplay({
             onCableSelect(cable.uid);
     }
 
-
     return (
         <div className="cable-display">
             <div className={`building-boxes ${shouldDisplayPorts(leftCabinetObj) || shouldDisplayPorts(rightCabinetObj) ? 'ports-mode' : ''}`}>
@@ -445,11 +431,12 @@ function BoxDisplay({
                                         <div className="building-type">{leftInfo.subtitle}</div>
                                         <div className="port-info">{leftInfo.portInfo}</div>
                                         <div className="cable-count">{leftInfo.cableCount}</div>
+                                        {console.log('Extra content check:', leftInfo)} {/* Add this debug */}
                                     </div>
                                 </>
                             )}
 
-                            {shouldDisplayPorts(leftCabinetObj) && (
+                            {!!shouldDisplayPorts(leftCabinetObj) && (
                                 <div className="port-display">
                                     <div className="cabinet-title">
                                         <h4>{leftInfo.title}</h4>
@@ -521,19 +508,7 @@ function BoxDisplay({
 
                 {/* Right Box */}
                 <div className={getBuildingBoxClass(rightCabinetObj) + (rightInfo?.isTargetList ? ' target-box' : '')}>
-                    {rightInfo?.isTargetList ? (
-                        <div className="target-content">
-                            <div className="target-title">יעדי הכבלים ({rightInfo.targets.length})</div>
-                            <div className="target-list">
-                                {rightInfo.targets.slice(0, 6).map((target, index) => (
-                                    <div key={index} className="target-item">{target}</div>
-                                ))}
-                                {rightInfo.targets.length > 6 && (
-                                    <div className="target-more">ועוד {rightInfo.targets.length - 6}...</div>
-                                )}
-                            </div>
-                        </div>
-                    ) : rightInfo ? (
+                    {rightInfo ? (
                         <div className="building-content">
                             {!shouldDisplayPorts(rightCabinetObj) && (
                                 <>
@@ -546,7 +521,7 @@ function BoxDisplay({
                                 </>
                             )}
 
-                            {shouldDisplayPorts(rightCabinetObj) && (
+                            {!!shouldDisplayPorts(rightCabinetObj) && (
                                 <div className="port-display">
                                     <div className="cabinet-title">
                                         <h4>{rightInfo.title}</h4>
@@ -574,7 +549,7 @@ function BoxDisplay({
             </div>
 
             {/* Port Connection Display - Show when both cabinets have ports and ports are selected */}
-            {shouldDisplayPorts(leftCabinetObj) && shouldDisplayPorts(rightCabinetObj) &&
+            {!!shouldDisplayPorts(leftCabinetObj) && !!shouldDisplayPorts(rightCabinetObj) &&
                 (selectedLeftPort || selectedRightPort) && (
                     <div className="port-connection-info">
                         <h4>חיבור פורטים</h4>

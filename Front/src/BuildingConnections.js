@@ -243,9 +243,9 @@ function BuildingConnections({ onBuildingSelect, onCableSelect, selectedConnectB
                                 {
                                     name: 'port_count',
                                     label: 'מספר פורטים',
-                                    type: 'number',
+                                    type: 'select',
                                     required: false,
-                                    placeholder: 'מספר פורטים (0-48)'
+                                    options: ['24', '48', '72', '144']
                                 }
                             ]}
                             onAdd={async (formData) => {
@@ -304,9 +304,9 @@ function BuildingConnections({ onBuildingSelect, onCableSelect, selectedConnectB
                                     {
                                         name: 'port_count',
                                         label: 'מספר פורטים',
-                                        type: 'number',
+                                        type: 'select',
                                         required: false,
-                                        placeholder: 'מספר פורטים (0-48)'
+                                        options: ['24', '48', '72', '144']
                                     }
                                 ]}
                                 itemData={{

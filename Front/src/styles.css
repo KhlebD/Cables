@@ -586,6 +586,7 @@ ul {
     padding: 16px;
     background-color: #f5f5f5;
     min-width: 300px;
+    height: 200px;      /* Add this - fixed height */
     cursor: pointer;
     transition: all 0.2s ease;
 }
@@ -678,6 +679,7 @@ ul {
     cursor: pointer;
     transition: all 0.2s ease;
     min-width: 150px;
+    height: 200px;      /* Add this - same height as main-cabinet */
     display: flex;
     flex-direction: column;
     justify-content: center;
