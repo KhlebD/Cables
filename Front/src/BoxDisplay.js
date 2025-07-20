@@ -431,7 +431,6 @@ function BoxDisplay({
                                         <div className="building-type">{leftInfo.subtitle}</div>
                                         <div className="port-info">{leftInfo.portInfo}</div>
                                         <div className="cable-count">{leftInfo.cableCount}</div>
-                                        {console.log('Extra content check:', leftInfo)} {/* Add this debug */}
                                     </div>
                                 </>
                             )}

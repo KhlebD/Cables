@@ -233,14 +233,20 @@ const Store = create((set, get) => ({
         }
     },
 
-    removeBuilding: async (buildingName) => {
+    removeBuilding: async (buildingName, adminPassword) => {
         const previousState = get().buildings;
         set((state) => ({
             buildings: state.buildings.filter(building => building.name !== buildingName)
         }));
         try {
             const response = await fetch(`http://localhost:5001/buildings/remove/${buildingName}`, {
-                method: 'DELETE'
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    password: adminPassword
+                })
             });
 
             if (!response.ok) {
@@ -257,7 +263,7 @@ const Store = create((set, get) => ({
         }
     },
 
-    removeCabinet: async (cabinetID) => {
+    removeCabinet: async (cabinetID, adminPassword) => {
         const previousState = get().buildings;
 
         // Optimistic update - remove cabinet and all its children
@@ -273,7 +279,13 @@ const Store = create((set, get) => ({
         try {
             const encodedCabinetID = encodeURIComponent(cabinetID);
             const response = await fetch(`http://localhost:5001/cabinets/remove/${encodedCabinetID}`, {
-                method: 'DELETE'
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    password: adminPassword
+                })
             });
 
             if (!response.ok) {

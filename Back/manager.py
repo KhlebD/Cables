@@ -1,10 +1,43 @@
+import os
 from flask import Flask, request, jsonify
 import psycopg2
 import psycopg2.extras
 from flask_cors import CORS
+import hashlib
+from dotenv import load_dotenv
 
+load_dotenv()
 app = Flask(__name__)
 CORS(app)
+
+# Handle security
+
+def verify_admin_password(password):
+    """Verify if provided password matches admin password"""
+    if not password:
+        return False
+    
+    # Get stored hash from environment
+    stored_hash = os.getenv('ADMIN_PASSWORD_HASH')
+    if not stored_hash:
+        print("No admin password hash found in environment")
+        return False
+    
+    # Hash the provided password
+    provided_hash = hashlib.sha256(password.encode()).hexdigest()
+    
+    # Compare hashes
+    return provided_hash == stored_hash
+
+@app.route('/auth/verify-admin', methods=['POST'])
+def verify_admin():
+    data = request.get_json()
+    password = data.get('password')
+    
+    if verify_admin_password(password):
+        return jsonify({'valid': True}), 200
+    else:
+        return jsonify({'valid': False}), 401
 
 # Database connection helper
 def get_db_connection():
@@ -502,6 +535,13 @@ def add_cable():
 # REMOVERS
 @app.route('/buildings/remove/<building_name>', methods=['DELETE'])
 def remove_building(building_name):
+
+    data = request.get_json() or {}
+    password = data.get('password')
+    
+    if not verify_admin_password(password):
+        return jsonify({'error': 'Invalid admin password'}), 401
+    
     conn = get_db_connection()
     cursor = conn.cursor()
     
@@ -523,6 +563,12 @@ def remove_building(building_name):
 
 @app.route('/cabinets/remove/<path:cabinet_id>', methods=['DELETE'])
 def remove_cabinet(cabinet_id):
+    data = request.get_json() or {}
+    password = data.get('password')
+    
+    if not verify_admin_password(password):
+        return jsonify({'error': 'Invalid admin password'}), 401
+    
     conn = get_db_connection()
     cursor = conn.cursor()
     

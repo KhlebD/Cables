@@ -262,10 +262,10 @@ function BuildingConnections({ onBuildingSelect, onCableSelect, selectedConnectB
                         {selectedCabinet && (
                             <RemoveButton
                                 itemType="ארון"
-                                onRemove={async () => {
+                                onRemove={async (password) => {
                                     const tempSelectedCabinetID = selectedCabinet.identifier;
                                     onCabinetSelect(null);
-                                    await Store.getState().removeCabinet(tempSelectedCabinetID);
+                                    await Store.getState().removeCabinet(tempSelectedCabinetID, password);
                                 }}
                             />
                         )}
