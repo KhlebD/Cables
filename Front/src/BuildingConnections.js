@@ -42,14 +42,36 @@ function BuildingConnections({ onBuildingSelect, onCableSelect, selectedConnectB
 
         return { parentCabinets, standaloneCabinets };
     };
+    // Helper function to get all cabinets that should be considered for a given cabinet
+    const getCabinetsToCheck = (cabinetIdentifier) => {
+        const cabinetsToCheck = [cabinetIdentifier];
+
+        // Find all panels under this cabinet
+        buildings?.forEach(building => {
+            building.cabinets?.forEach(cabinet => {
+                if (cabinet.parent_cabinet === cabinetIdentifier) {
+                    cabinetsToCheck.push(cabinet.identifier);
+                }
+            });
+        });
+
+        return cabinetsToCheck;
+    };
 
     const findConnections = (sourceId, isBuilding = true) => {
-        if (!sourceId)
-            return [];
+        if (!sourceId) return [];
+
         const connectedSet = new Set();
+
+
         buildings?.forEach(building => {
             building.cabinets?.forEach(cabinet => {
                 if (!cabinet.identifier) return;
+
+                // Get all cabinets to check (main cabinet + its panels)
+                const cabinetsToCheck = isBuilding
+                    ? [cabinet.identifier]  // For building mode, check individual cabinets
+                    : getCabinetsToCheck(sourceId.identifier); // For cabinet mode, include panels
 
                 cabinet.cables?.forEach(cable => {
                     if (!cable.uid) return;
@@ -57,19 +79,28 @@ function BuildingConnections({ onBuildingSelect, onCableSelect, selectedConnectB
                     buildings?.forEach(otherBuilding => {
                         otherBuilding.cabinets?.forEach(otherCabinet => {
                             if (!otherCabinet.identifier) return;
-
                             if (cabinet.identifier === otherCabinet.identifier) return;
 
                             const isConnected = otherCabinet.cables?.some(c => c.uid && c.uid === cable.uid);
 
                             if (isConnected) {
                                 if (isBuilding) {
+                                    // Building mode: check if source building connects to other building
                                     if (building.name === sourceId) {
                                         connectedSet.add(otherBuilding.name);
                                     }
                                 } else {
-                                    if (cabinet.identifier === sourceId.identifier) {
+                                    // Cabinet mode: check if any of our cabinets/panels connect to other cabinet
+                                    if (cabinetsToCheck.includes(cabinet.identifier)) {
                                         connectedSet.add(otherCabinet.identifier);
+
+                                        // Also add the parent cabinet if the connected cabinet is a panel
+                                        if (otherCabinet.parent_cabinet) {
+                                            connectedSet.add(otherCabinet.parent_cabinet);
+                                        }
+
+                                        // Add the building name for cross-building highlighting
+                                        connectedSet.add(otherBuilding.name);
                                     }
                                 }
                             }

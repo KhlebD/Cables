@@ -90,35 +90,7 @@ function BoxDisplay({
     );
     // Get cables to display based on selection mode
     const displayedCables = useMemo(() => {
-        // Mode 1: One cabinet selected - show all its cables
-        if (leftCabinetObj && !rightCabinetObj) {
-            return leftCabinetObj.cables?.map(cable => {
-                // Find which building the other end connects to
-                const otherCabinetId = cable.cabinet1 === leftCabinetObj.identifier
-                    ? cable.cabinet2
-                    : cable.cabinet1;
-
-                // Find the other cabinet across all buildings
-                let otherCabinet = null;
-                let otherBuilding = null;
-
-                buildings.forEach(building => {
-                    const foundCab = building.cabinets?.find(cab => cab.identifier === otherCabinetId);
-                    if (foundCab) {
-                        otherCabinet = foundCab;
-                        otherBuilding = building.name;
-                    }
-                });
-
-                return {
-                    ...cable,
-                    other_cabinet: otherCabinet,
-                    other_building: otherBuilding,
-                };
-            }) || [];
-        }
-
-
+        
         if (leftCabinetObj && rightCabinetObj) {
             if (leftCabinetObj.identifier === rightCabinetObj.identifier) {
                 return [];
@@ -145,40 +117,6 @@ function BoxDisplay({
                         ...cable,
                     });
                 }
-            });
-            return cables;
-        }
-
-        // Mode 3: No cabinets selected - show building-to-building cables (your original logic)
-        if (!selectedLeftCabinet && !selectedRightCabinet && leftBuilding && rightBuilding) {
-            const building1 = buildings?.find(b => b.name === leftBuilding);
-            const building2 = buildings?.find(b => b.name === rightBuilding);
-
-            if (!building1 || !building2) return [];
-
-            let cables = [];
-            building1.cabinets?.forEach(cab1 => {
-                if (!cab1.cables) return;
-
-                cab1.cables.forEach(cable => {
-                    if (!cable.number) return;
-
-                    const connectedCabinet = building2.cabinets?.find(cab2 =>
-                        cab2.cables?.some(c => c.uid === cable.uid)
-                    );
-
-                    if (connectedCabinet &&
-                        !(leftBuilding === rightBuilding && cab1.identifier === connectedCabinet.identifier)) {
-                        cables.push({
-                            uid: cable.uid,
-                            number: cable.number,
-                            num_of_fibers: cable.num_of_fibers,
-                            cable_type: cable.cable_type,
-                            cabinet1: cab1.identifier,
-                            cabinet2: connectedCabinet.identifier,
-                        });
-                    }
-                });
             });
             return cables;
         }
@@ -417,6 +355,8 @@ function BoxDisplay({
             onCableSelect(cable.uid);
     }
 
+    console.log(leftCabinetObj);
+
     return (
         <div className="cable-display">
             <div className={`building-boxes ${shouldDisplayPorts(leftCabinetObj) || shouldDisplayPorts(rightCabinetObj) ? 'ports-mode' : ''}`}>
@@ -460,7 +400,7 @@ function BoxDisplay({
                 </div>
 
                 {/* SVG for cables - show for buildings OR when both panels are selected */}
-                {((leftBuilding && rightBuilding) || (leftCabinetObj && rightCabinetObj)) && displayedCables.length > 0 && (
+                {((leftBuilding && rightBuilding) || (leftCabinetObj && rightCabinetObj)) && (
                     <svg className="cables-svg">
                         {displayedCables.map((cable, index) => (
                             <g key={cable.uid}>

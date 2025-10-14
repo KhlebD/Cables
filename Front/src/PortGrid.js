@@ -10,6 +10,8 @@ const PortGrid = ({
 }) => {
     const getPortLayout = (count) => {
         switch(count) {
+            case 12:
+                return { rows: 1, cols: 12, layout: 'horizontal' };
             case 24:
                 return { rows: 2, cols: 12, layout: 'horizontal' };
             case 48:

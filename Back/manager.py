@@ -532,6 +532,7 @@ def add_cable():
         return jsonify({'error': str(e)}), 500
     finally:
         conn.close()
+
 # REMOVERS
 @app.route('/buildings/remove/<building_name>', methods=['DELETE'])
 def remove_building(building_name):
@@ -788,43 +789,35 @@ def update_cabinet():
             print(f"✓ Child references updated. Rows affected: {cursor.rowcount}")
         
         # Handle port count if provided
-        if port_count is not None:
+        if port_count is not None or '':
             print(f"🔄 Handling port count: {port_count}")
             try:
                 port_count = int(port_count)
                 print(f"✓ Port count converted to int: {port_count}")
-                
-                # Check if ports table exists
-                cursor.execute("SELECT to_regclass('public.ports')")
-                ports_table_exists = cursor.fetchone()[0] is not None
-                print(f"🔍 Ports table exists: {ports_table_exists}")
-                
-                if ports_table_exists:
-                    # Delete existing ports for this cabinet
-                    print(f"🔄 Deleting existing ports for cabinet: {new_identifier}")
-                    cursor.execute("DELETE FROM ports WHERE cabinet_id = %s", (new_identifier,))
-                    deleted_count = cursor.rowcount
-                    print(f"✓ Deleted {deleted_count} existing ports")
+                                 
+                # Create new ports if count > prev count
+                cursor.execute('SELECT port_count FROM cabinets WHERE identifier = %s',
+                               (old_identifier,)
+                )
+                curr_port_count = cursor.fetchone()[0]
+                print(curr_port_count)
+
+                if (port_count > curr_port_count):
+                    print(f"🔄 Creating {(port_count - curr_port_count)} new ports...")
+                    for port_num in range(curr_port_count + 1, curr_port_count + port_count + 1):
+                        cursor.execute(
+                            "INSERT INTO ports (cabinet_id, port_number) VALUES (%s, %s)",
+                            (new_identifier, port_num)                            )
+                    print(f"✓ Created {port_count - curr_port_count} new ports")
                     
-                    # Create new ports if count > 0
-                    if port_count > 0:
-                        print(f"🔄 Creating {port_count} new ports...")
-                        for port_num in range(1, port_count + 1):
-                            cursor.execute(
-                                "INSERT INTO ports (cabinet_id, port_number) VALUES (%s, %s)",
-                                (new_identifier, port_num)
-                            )
-                        print(f"✓ Created {port_count} new ports")
-                    
-                    # Update cabinet port count
-                    print("🔄 Updating cabinet port_count field...")
-                    cursor.execute(
-                        'UPDATE cabinets SET port_count = %s WHERE identifier = %s',
-                        (port_count, new_identifier)
-                    )
-                    print(f"✓ Cabinet port_count updated to {port_count}")
-                else:
-                    print("⚠️ Ports table doesn't exist, skipping port operations")
+                # Update cabinet port count
+                print("🔄 Updating cabinet port_count field...")
+                cursor.execute(
+                    'UPDATE cabinets SET port_count = %s WHERE identifier = %s',                        
+                    (port_count, new_identifier)
+                )
+                print(f"✓ Cabinet port_count updated to {port_count}")
+
                     
             except ValueError as e:
                 print(f"❌ Error converting port_count to int: {e}")
