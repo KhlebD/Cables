@@ -9,14 +9,12 @@ function EditButton({ itemType, fields, onUpdate, itemData }) {
     const formRef = useRef(null);
     const buttonRef = useRef(null);
 
-    // Initialize form data when component mounts or itemData changes
     useEffect(() => {
         if (itemData) {
             setFormData(itemData);
         }
     }, [itemData]);
 
-    // Reset error and success messages when popup closes
     useEffect(() => {
         if (!isPopupOpen) {
             setError('');
@@ -25,10 +23,9 @@ function EditButton({ itemType, fields, onUpdate, itemData }) {
         }
     }, [isPopupOpen]);
 
-    // Handle clicks outside the form
+    // close when click outside form
     useEffect(() => {
-        const handleClickOutside = (event) => {
-            // If the form is open and the click is outside both the form and the button
+        const handleClickOutside = (event) => {n
             if (isPopupOpen && formRef.current && buttonRef.current && 
                 !formRef.current.contains(event.target) && 
                 !buttonRef.current.contains(event.target)) {
@@ -36,12 +33,9 @@ function EditButton({ itemType, fields, onUpdate, itemData }) {
             }
         };
 
-        // Add event listener when the popup is open
         if (isPopupOpen) {
             document.addEventListener('mousedown', handleClickOutside);
         }
-
-        // Clean up the event listener
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
@@ -60,7 +54,7 @@ function EditButton({ itemType, fields, onUpdate, itemData }) {
         }
     };
 
-    // Get options for a field
+    // Get options for field
     const getFieldOptions = (field) => {
         if (typeof field.options === 'function') 
             return field.options(formData);
@@ -77,7 +71,6 @@ function EditButton({ itemType, fields, onUpdate, itemData }) {
         // Clear any fields that depend on this one
         fields.forEach(field => {
             if (field.dependsOn?.includes(fieldName)) {
-                // Reset dependent fields
                 newFormData[field.name] = '';
             }
         });

@@ -9,7 +9,6 @@ function RemoveButton({ itemType, onRemove }) {
     const formRef = useRef(null);
     const buttonRef = useRef(null);
 
-    // Reset error, success, and password when popup closes
     useEffect(() => {
         if (!isPopupOpen) {
             setError('');
@@ -18,10 +17,9 @@ function RemoveButton({ itemType, onRemove }) {
         }
     }, [isPopupOpen]);
 
-    // Handle clicks outside the form
+    // close when click outside form
     useEffect(() => {
         const handleClickOutside = (event) => {
-            // If the form is open and the click is outside both the form and the button
             if (isPopupOpen && formRef.current && buttonRef.current &&
                 !formRef.current.contains(event.target) &&
                 !buttonRef.current.contains(event.target)) {
@@ -29,12 +27,9 @@ function RemoveButton({ itemType, onRemove }) {
             }
         };
 
-        // Add event listener when the popup is open
         if (isPopupOpen) {
             document.addEventListener('mousedown', handleClickOutside);
         }
-
-        // Clean up the event listener
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
@@ -59,20 +54,18 @@ function RemoveButton({ itemType, onRemove }) {
                 return;
             }
 
-            // Password valid, proceed with deletion
             await onRemove(password);
             setSuccess(`${itemType} removed successfully!`);
             setTimeout(() => {
                 setIsPopupOpen(false);
                 setSuccess('');
                 setPassword('');
-            }, 3000);
+            }, 1500);
         } catch (error) {
             setError(error.message);
         }
     };
 
-    // Handle Enter key press in password field
     const handleKeyDown = (e) => {
         if (e.key === 'Enter') {
             handleRemove();

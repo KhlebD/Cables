@@ -9,10 +9,8 @@ function AddButton({ itemType, fields, onAdd, initialValues = {} }) {
     const formRef = useRef(null);
     const buttonRef = useRef(null);
 
-    // Store the previous initialValues to detect meaningful changes
     const prevInitialValuesRef = useRef(initialValues);
 
-    // Reset form data when popup closes OR when initialValues meaningfully change
     useEffect(() => {
         if (!isPopupOpen) {
             setFormData(initialValues);
@@ -21,9 +19,7 @@ function AddButton({ itemType, fields, onAdd, initialValues = {} }) {
         }
     }, [isPopupOpen]);
 
-    // Separate effect to handle initialValues changes when popup is open
     useEffect(() => {
-        // Only update if initialValues actually changed (deep comparison for key fields)
         const hasChanged = JSON.stringify(prevInitialValuesRef.current) !== JSON.stringify(initialValues);
 
         if (hasChanged) {
@@ -32,10 +28,9 @@ function AddButton({ itemType, fields, onAdd, initialValues = {} }) {
         }
     }, [initialValues]);
 
-    // Handle clicks outside the form
+    // close when click outside form
     useEffect(() => {
         const handleClickOutside = (e) => {
-            // If the form is open and the click is outside both the form and the button
             if (isPopupOpen && formRef.current && buttonRef.current &&
                 !formRef.current.contains(e.target) &&
                 !buttonRef.current.contains(e.target)) {
@@ -43,12 +38,9 @@ function AddButton({ itemType, fields, onAdd, initialValues = {} }) {
             }
         };
 
-        // Add event listener when the popup is open
         if (isPopupOpen) {
             document.addEventListener('mousedown', handleClickOutside);
         }
-
-        // Clean up the event listener
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
@@ -59,7 +51,7 @@ function AddButton({ itemType, fields, onAdd, initialValues = {} }) {
         try {
             await onAdd(formData);
             setSuccess(`${itemType} added successfully!`);
-            setFormData(initialValues);  // Reset to initial values instead of empty object
+            setFormData(initialValues); 
             setTimeout(() => {
                 setIsPopupOpen(false);
                 setSuccess('');
@@ -69,7 +61,7 @@ function AddButton({ itemType, fields, onAdd, initialValues = {} }) {
         }
     };
 
-    // Get options for a field
+    // options for field
     const getFieldOptions = (field) => {
         if (typeof field.options === 'function')
             return field.options(formData);
@@ -86,7 +78,6 @@ function AddButton({ itemType, fields, onAdd, initialValues = {} }) {
         // Clear any fields that depend on this one
         fields.forEach(field => {
             if (field.dependsOn?.includes(fieldName)) {
-                // Reset dependent fields
                 newFormData[field.name] = '';
             }
         });
