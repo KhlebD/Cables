@@ -6,7 +6,6 @@ import BoxDisplay from './BoxDisplay';
 
 export default function App() {
     const fetchNetwork = Store(state => state.fetchNetwork);
-    
     const [selectedGridBuilding, setSelectedGridBuilding] = useState(null);
     const [selectedConnectBuilding, setSelectedConnectBuilding] = useState(null);
     const [selectedGridCabinet, setSelectedGridCabinet] = useState(null);
@@ -17,11 +16,10 @@ export default function App() {
     const [selectedRightPort, setSelectedRightPort] = useState(null);
     
     useEffect(() => {
-        fetchNetwork().then(result => {
-        }).catch(err => {
-            console.error('❌ fetchNetwork error:', err);
+        fetchNetwork().catch(err => {
+            console.error('fetchNetwork error:', err);
         });
-    }, []); // Empty dependency array - only run once on mount
+    }, [fetchNetwork]);
 
     return (
         <div className="app-container">
