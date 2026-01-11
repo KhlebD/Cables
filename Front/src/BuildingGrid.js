@@ -20,13 +20,12 @@ const BuildingGrid = ({ connectedBuildings, onBuildingSelect, onCableSelect, onC
     const pageChangeTimerRef = useRef(null);
     const buildingsPerPage = 20;
 
-    // Get ordered buildings
     const orderedBuildings = [...buildings].sort((a, b) =>
         (a.order !== undefined && b.order !== undefined) ?
             a.order - b.order : 0
     );
 
-    // Initialize order if not already set
+    // Initialize order
     useEffect(() => {
         const needsOrder = buildings.some(building => building.order === undefined);
         if (needsOrder && buildings.length > 0) {
@@ -57,7 +56,7 @@ const BuildingGrid = ({ connectedBuildings, onBuildingSelect, onCableSelect, onC
         };
     }, []);
 
-    // Comprehensive cleanup function for all drag states
+    // cleanup  for all drag states
     const cleanupDragStates = () => {
         setDraggedBuilding(null);
         setDragOverBuilding(null);
@@ -70,7 +69,6 @@ const BuildingGrid = ({ connectedBuildings, onBuildingSelect, onCableSelect, onC
             pageChangeTimerRef.current = null;
         }
 
-        // Remove any lingering dragging classes from all building items
         const buildingItems = document.querySelectorAll('.building-item');
         buildingItems.forEach(item => {
             item.classList.remove('dragging');
@@ -101,8 +99,6 @@ const BuildingGrid = ({ connectedBuildings, onBuildingSelect, onCableSelect, onC
         setIsDragging(true);
         e.dataTransfer.effectAllowed = 'move';
         e.dataTransfer.setData('text/plain', building.name);
-
-        // For better visual feedback
         setTimeout(() => {
             e.target.classList.add('dragging');
         }, 0);
@@ -119,8 +115,8 @@ const BuildingGrid = ({ connectedBuildings, onBuildingSelect, onCableSelect, onC
         if (!isDragging || !gridRef.current) return;
 
         const gridRect = gridRef.current.getBoundingClientRect();
-        const leftEdge = gridRect.left + 50; // 50px from left edge
-        const rightEdge = gridRect.right - 50; // 50px from right edge
+        const leftEdge = gridRect.left + 50; 
+        const rightEdge = gridRect.right - 50; 
 
         if (e.clientX < leftEdge && currentPage > 0) {
             setShowLeftIndicator(true);
@@ -132,6 +128,7 @@ const BuildingGrid = ({ connectedBuildings, onBuildingSelect, onCableSelect, onC
                     pageChangeTimerRef.current = null;
                 }, 800);
             }
+        
         } else if (e.clientX > rightEdge && currentPage < totalPages - 1) {
             setShowLeftIndicator(false);
             setShowRightIndicator(true);
@@ -143,7 +140,7 @@ const BuildingGrid = ({ connectedBuildings, onBuildingSelect, onCableSelect, onC
                 }, 800);
             }
         } else {
-            // Not near any edge
+            // Not near edge
             setShowLeftIndicator(false);
             setShowRightIndicator(false);
 
@@ -159,8 +156,6 @@ const BuildingGrid = ({ connectedBuildings, onBuildingSelect, onCableSelect, onC
         if (draggedBuilding && building.name !== draggedBuilding.name) {
             setDragOverBuilding(building);
         }
-
-        // Call the container dragover handler to check for edge detection
         handleContainerDragOver(e);
     };
 
@@ -171,35 +166,24 @@ const BuildingGrid = ({ connectedBuildings, onBuildingSelect, onCableSelect, onC
     const handleDrop = (e, targetBuilding) => {
         e.preventDefault();
         if (!draggedBuilding || draggedBuilding.name === targetBuilding.name) {
-            cleanupDragStates(); // Still clean up even if no valid drop
+            cleanupDragStates(); 
             return;
         }
 
-        // Create a new array with updated order
         const updatedOrder = orderedBuildings.map(building => ({
             name: building.name,
             order: building.order
         }));
 
-        // Find dragged and target indices in the full list
         const draggedIndex = updatedOrder.findIndex(b => b.name === draggedBuilding.name);
         const targetIndex = updatedOrder.findIndex(b => b.name === targetBuilding.name);
-
-        // Remove the dragged item
         const [removed] = updatedOrder.splice(draggedIndex, 1);
-
-        // Insert it at the target position
         updatedOrder.splice(targetIndex, 0, removed);
 
-        // Update the order values to match the new array indices
         updatedOrder.forEach((building, index) => {
             building.order = index;
         });
-
-        // Update the order in the store
         updateBuildingOrder(updatedOrder);
-
-        // Clean up all drag states after successful drop
         cleanupDragStates();
     };
 
