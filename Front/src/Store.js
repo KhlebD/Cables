@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 
 const Store = create((set, get) => ({
-    buildings: [], // Array of buildings with nested cabinets, cables, fibers
+    buildings: [],
 
     // Fetch all network data
     fetchNetwork: async () => {
@@ -19,15 +19,13 @@ const Store = create((set, get) => ({
     updateBuildingOrder: async (newOrder) => {
         const previousState = get().buildings;
 
-        // Optimistic update - immediately update the UI
+        // Optimistic update
         set((state) => {
-            // Create a map of building orders
             const orderMap = {};
             newOrder.forEach(item => {
                 orderMap[item.name] = item.order;
             });
 
-            // Update the buildings array with the new order
             const updatedBuildings = state.buildings.map(building => ({
                 ...building,
                 order: orderMap[building.name] !== undefined ? orderMap[building.name] : building.order
@@ -37,7 +35,6 @@ const Store = create((set, get) => ({
         });
 
         try {
-            // Send the update to the backend
             const response = await fetch('http://localhost:5001/buildings/update-order', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
@@ -45,14 +42,14 @@ const Store = create((set, get) => ({
             });
 
             if (!response.ok) {
-                // Revert to previous state if the update failed
+                // revert if failed
                 set({ buildings: previousState });
                 return { success: false };
             }
 
             return { success: true };
         } catch (error) {
-            // Revert to previous state if there was an error
+            // revert if failed
             set({ buildings: previousState });
             console.error('Error updating building order:', error);
             throw error;
@@ -70,10 +67,7 @@ const Store = create((set, get) => ({
                 }
             });
 
-            // Set the new building's order
             const newOrder = maxOrder + 1;
-
-            // Send both the name and order to the backend
             const response = await fetch('http://localhost:5001/buildings/add', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -87,7 +81,6 @@ const Store = create((set, get) => ({
                 return { success: false };
             }
 
-            // Update the local store
             set((state) => ({
                 buildings: [...state.buildings, {
                     name,
@@ -133,12 +126,10 @@ const Store = create((set, get) => ({
                 building_name: buildingName
             };
 
-            // Only include parent_cabinet if not null
             if (parentCabinet !== null) {
                 requestBody.parent_cabinet = parentCabinet;
             }
 
-            // Include port_count if not null
             console.log(portCount);
             if (portCount !== null && portCount !== undefined) {
                 requestBody.port_count = portCount;
@@ -520,7 +511,5 @@ const Store = create((set, get) => ({
         }
     },
 }));
-
-
 
 export default Store;

@@ -18,7 +18,6 @@ const FiberDisplay = ({ selectedCable, selectedFiber, onFiberSelect, onLeftPortS
                     c.uid === selectedCable
                 );
                 if (cable) {
-                    // Find the other cabinet this cable connects to
                     let otherCabinet;
                     buildings.forEach(b => {
                         b.cabinets?.forEach(cab => {
@@ -42,7 +41,7 @@ const FiberDisplay = ({ selectedCable, selectedFiber, onFiberSelect, onLeftPortS
 
     const handleFiberSelect = (selectedFiber) => {
         onFiberSelect(selectedFiber);
-        // Auto-select the ports connected to this fiber
+        // Auto-select
         if (onLeftPortSelect && selectedFiber.port_cabinet1) {
             onLeftPortSelect(parseInt(selectedFiber.port_cabinet1));
         }
