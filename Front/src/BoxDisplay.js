@@ -24,6 +24,7 @@ function BoxDisplay({
 }) {
     const buildings = Store(state => state.buildings);
     const [hoveredCableId, setHoveredCableId] = useState(null);
+    
     // Get cabinet objects from identifiers
     const leftCabinetObj = useMemo(() => {
         if (!selectedLeftCabinet || !leftBuilding) return null;
@@ -45,7 +46,6 @@ function BoxDisplay({
         cabinetObj.cables.forEach(cable => {
             if (cable.fibers) {
                 cable.fibers.forEach(fiber => {
-                    // Check which cabinet we're looking at and get the appropriate port
                     if (cable.cabinet1 === cabinetObj.identifier && fiber.port_cabinet1) {
                         occupiedPorts.push(parseInt(fiber.port_cabinet1));
                     } else if (cable.cabinet2 === cabinetObj.identifier && fiber.port_cabinet2) {
@@ -54,7 +54,7 @@ function BoxDisplay({
                 });
             }
         });
-        return [...new Set(occupiedPorts)]; // Remove duplicates
+        return [...new Set(occupiedPorts)];
     };
 
     // Get ports that belong to the selected cable
@@ -66,7 +66,6 @@ function BoxDisplay({
 
         const cablePorts = [];
         cable.fibers.forEach(fiber => {
-            // Check which cabinet we're looking at and get the appropriate port
             if (cable.cabinet1 === cabinetObj.identifier && fiber.port_cabinet1) {
                 cablePorts.push(parseInt(fiber.port_cabinet1));
             } else if (cable.cabinet2 === cabinetObj.identifier && fiber.port_cabinet2) {
@@ -88,7 +87,8 @@ function BoxDisplay({
         getCablePortsForCabinet(rightCabinetObj, selectedCable),
         [rightCabinetObj, selectedCable]
     );
-    // Get cables to display based on selection mode
+
+    // Get cables to display
     const displayedCables = useMemo(() => {
         
         if (leftCabinetObj && rightCabinetObj) {
@@ -97,22 +97,10 @@ function BoxDisplay({
             }
 
             const cables = [];
-
-            // Check cables from left cabinet to right cabinet
+            // cables from left to right
             leftCabinetObj.cables?.forEach(cable => {
                 if (cable.cabinet1 === rightCabinetObj.identifier ||
                     cable.cabinet2 === rightCabinetObj.identifier) {
-                    cables.push({
-                        ...cable,
-                    });
-                }
-            });
-
-            // Also check cables from right cabinet to left cabinet (in case they're only stored on one side)
-            rightCabinetObj.cables?.forEach(cable => {
-                if ((cable.cabinet1 === leftCabinetObj.identifier ||
-                    cable.cabinet2 === leftCabinetObj.identifier) &&
-                    !cables.some(existingCable => existingCable.uid === cable.uid)) {
                     cables.push({
                         ...cable,
                     });
@@ -124,7 +112,7 @@ function BoxDisplay({
         return [];
     }, [leftCabinetObj, rightCabinetObj, buildings, leftBuilding, rightBuilding, selectedLeftCabinet, selectedRightCabinet]);
 
-    // Calculate cable positions for SVG
+    // Calculate vertical cable positions for SVG
     const getCablePosition = (index, totalCables) => {
         const spacing = 150 / (totalCables + 1);
         return spacing * (index + 1);
@@ -133,11 +121,9 @@ function BoxDisplay({
     const findConnectedPort = (fromCabinet, fromPort) => {
         if (!fromCabinet || !buildings) return null;
 
-        // Search through all cables in the fromCabinet to find which one uses this port
         for (const cable of fromCabinet.cables || []) {
             if (!cable.fibers) continue;
 
-            // Find the fiber that uses this port
             const fiber = cable.fibers.find(f => {
                 if (cable.cabinet1 === fromCabinet.identifier) {
                     return parseInt(f.port_cabinet1) === fromPort;
@@ -147,7 +133,7 @@ function BoxDisplay({
                 return false;
             });
 
-            if (!fiber) continue; // This cable doesn't use this port
+            if (!fiber) continue; // not connected to this port
 
             // Get the other cabinet identifier and port from the cable/fiber
             let otherCabinetId, otherPort;
@@ -160,7 +146,7 @@ function BoxDisplay({
                 otherPort = parseInt(fiber.port_cabinet1);
             }
 
-            // Find the other cabinet object in all buildings
+            // Find other cabinet
             let otherCabinet = null;
             let otherBuilding = null;
 
@@ -172,6 +158,7 @@ function BoxDisplay({
                 }
             });
 
+            // return object for auto select
             if (otherCabinet) {
                 return {
                     portNumber: otherPort,
@@ -195,7 +182,6 @@ function BoxDisplay({
         }
         else {
             onLeftPortSelect(portNumber);
-
             // Find connected port
             const connectedPort = findConnectedPort(leftCabinetObj, portNumber);
             if (connectedPort) {
@@ -217,7 +203,7 @@ function BoxDisplay({
         }
         else {
             onRightPortSelect(portNumber);
-            // Find connected port (works for any port, any cable)
+            // Find connected port
             const connectedPort = findConnectedPort(rightCabinetObj, portNumber);
             if (connectedPort) {
                 // Auto-select
@@ -230,13 +216,11 @@ function BoxDisplay({
         }
     };
 
-
-    // Check if cabinet should display ports
     const shouldDisplayPorts = (cabinetObj) => {
         return cabinetObj && cabinetObj.port_count && cabinetObj.port_count > 0;
     };
 
-    // Get building box class names based on port count
+    // box class based on choice
     const getBuildingBoxClass = (cabinetObj) => {
         let classes = ['building-box'];
 
@@ -344,6 +328,7 @@ function BoxDisplay({
 
         return filteredCabinets.map(cab => cab.identifier);
     };
+
     const handleCableSelect = (cable) => {
         onLeftPortSelect(null);
         onRightPortSelect(null);
@@ -354,8 +339,6 @@ function BoxDisplay({
         else
             onCableSelect(cable.uid);
     }
-
-    console.log(leftCabinetObj);
 
     return (
         <div className="cable-display">
@@ -399,7 +382,7 @@ function BoxDisplay({
                     )}
                 </div>
 
-                {/* SVG for cables - show for buildings OR when both panels are selected */}
+                {/* SVG for cables */}
                 {((leftBuilding && rightBuilding) || (leftCabinetObj && rightCabinetObj)) && (
                     <svg className="cables-svg">
                         {displayedCables.map((cable, index) => (
