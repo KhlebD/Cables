@@ -4,8 +4,10 @@ import Store from './Store';
 import AddButton from './AddButton';
 import RemoveButton from './RemoveButton';
 import EditButton from './EditButton';
-import './styles.css';
-import { CSSTransition } from 'react-transition-group';
+
+import './base.css';
+import './components.css';
+import './networkDisplay.css';
 
 function BuildingConnections({ onBuildingSelect, onCableSelect, selectedConnectBuilding, selectedCabinet, onCabinetSelect, onLeftPortSelect, onRightPortSelect, onFiberSelect, filterBy, filterByCabinet }) {
 

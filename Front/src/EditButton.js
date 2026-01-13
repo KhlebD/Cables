@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import './styles.css'; 
+import './base.css';
+import './components.css';
+import './networkDisplay.css';
 
 function EditButton({ itemType, fields, onUpdate, itemData }) {
     const [isPopupOpen, setIsPopupOpen] = useState(false);

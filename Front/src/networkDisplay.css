@@ -1,0 +1,563 @@
+
+/* CABLE DISPLAY */
+.button-container {
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    height: 45vh;
+    padding: 20px;
+}
+
+.cable-line {
+    pointer-events: all;
+    transition: stroke-width 0.2s;
+}
+
+.cable-display {
+    margin-top: auto;
+    width: 100%;
+    padding: 20px;
+}
+
+/* BUILDING BOXES */
+.building-boxes {
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 0 auto;
+    width: 1500px;
+    height: 200px;
+}
+
+.building-box {
+    width: 400px;
+    height: 500px;
+    background: white;
+    border: 2px solid #2196F3;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    position: relative;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s;
+}
+
+.building-box.empty-box {
+    border: 2px #2196F3;
+    border-style: dashed;
+    background: #f9f9f9;
+    font-size: 16px;
+    color: #666;
+}
+
+.building-box.cabinet-selected {
+    border: 3px solid #007bff;
+    background: linear-gradient(135deg, #cce7ff 0%, #99d6ff 100%);
+    box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+}
+
+.building-box.target-box {
+    border: 2px solid #28a745;
+    background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+}
+
+.building-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    font-size: 18px;
+    font-weight: 500;
+}
+
+.building-details {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.85em;
+}
+
+.building-type {
+    background: #007bff;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 4px;
+    display: inline-block;
+}
+
+.port-info {
+    background: #28a745;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 4px;
+    display: inline-block;
+}
+
+.cable-count {
+    background: #6c757d;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 4px;
+    display: inline-block;
+}
+
+.target-content {
+    width: 100%;
+    height: 100%;
+    padding: 15px;
+    overflow: hidden;
+}
+
+.target-title {
+    font-weight: bold;
+    color: #28a745;
+    margin-bottom: 10px;
+    font-size: 0.9em;
+}
+
+.target-list {
+    max-height: 120px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.target-item {
+    background: #e9ecef;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.8em;
+    text-align: center;
+}
+
+.target-more {
+    text-align: center;
+    color: #28a745;
+    font-style: italic;
+    font-size: 0.8em;
+    font-weight: 500;
+    margin-top: 4px;
+}
+
+/* CABLES SVG */
+.cables-svg {
+    position: absolute;
+    left: 418px;
+    width: 620px;
+    height: 150px;
+    top: 125px;
+    z-index: 5;
+    pointer-events: none;
+}
+
+.cables-svg line,
+.cables-svg text {
+    pointer-events: all;
+}
+
+.cable-label {
+    font-size: 12px;
+    pointer-events: none;
+}
+
+.cable-direction {
+    font-size: 14px;
+    fill: #666;
+    font-weight: bold;
+}
+
+/* CABLE INFO PANEL */
+.cable-info-panel {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    padding: 15px;
+    margin-top: 20px;
+}
+
+.cable-details-panel h4 {
+    margin: 0 0 10px 0;
+    color: #333;
+    font-size: 1.1em;
+}
+
+.cable-stats {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+}
+
+.cable-stats span {
+    background: #e9ecef;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.9em;
+    color: #495057;
+}
+
+.port-assignments h5 {
+    margin: 0 0 8px 0;
+    color: #495057;
+    font-size: 1em;
+}
+
+.port-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.port-assignment {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: white;
+    padding: 6px 10px;
+    border-radius: 4px;
+    border: 1px solid #dee2e6;
+    font-size: 0.85em;
+}
+
+.port-assignment .port-info {
+    background: #fff3cd;
+    color: #856404;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.8em;
+}
+
+.network-info {
+    background: #d1ecf1;
+    color: #0c5460;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.8em;
+}
+
+.more-fibers {
+    text-align: center;
+    color: #6c757d;
+    font-style: italic;
+    font-size: 0.85em;
+    padding: 4px;
+}
+
+/* FIBER DISPLAY */
+.fiber-display {
+    width: 100%;
+    padding: 20px;
+}
+
+.fiber-container {
+    position: relative;
+    width: 100%;
+    margin: 0 auto;
+    height: auto;
+    min-height: 200px;
+}
+
+.fiber-container input {
+    padding: 2px 4px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    width: 100%;
+    height: 24px;
+    text-align: center;
+    font-size: 16px;
+}
+
+.fiber-label {
+    text-align: center;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.fibers-svg {
+    width: 100%;
+    height: auto;
+    overflow: visible;
+}
+
+.fiber-number {
+    font-size: 12px;
+    pointer-events: none;
+}
+
+.fiber-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.cabinet-header {
+    font-family: 'Heebo', sans-serif;
+    font-size: 18px;
+    fill: #111;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* PORT GRID */
+.port-grid {
+    display: grid;
+    gap: 6px;
+    padding: 15px;
+    width: 100%;
+    height: 100%;
+    align-items: center;
+    justify-items: center;
+}
+
+.port-grid-24 {
+    height: 25%;
+    align-self: flex-start;
+}
+
+.port-grid-48 {
+    height: 50%;
+    align-self: flex-start;
+}
+
+.port-grid-72 {
+    height: 75%;
+    align-self: flex-start;
+}
+
+.port-grid-144 {
+    height: 100%;
+}
+
+/* PORT CIRCLES */
+.port-circle {
+    width: 25px;
+    height: 25px;
+    border-radius: 100%;
+    border: 2px solid #ddd;
+    background-color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.port-circle:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.port-free {
+    border-color: #ccc;
+    background-color: white;
+}
+
+.port-occupied {
+    border-color: #4CAF50;
+    background-color: #4CAF50;
+}
+
+.port-selected {
+    border-color: #2196F3;
+    background-color: #2196F3;
+    box-shadow: 0 0 10px rgba(33, 150, 243, 0.5);
+}
+
+.port-selected.port-occupied {
+    border-color: #2196F3;
+    background-color: #2196F3;
+}
+
+.port-number {
+    font-size: 12px;
+    font-weight: bold;
+    color: #333;
+    pointer-events: none;
+}
+
+.port-occupied .port-number,
+.port-selected .port-number {
+    color: white;
+}
+
+/* PORT DISPLAY */
+.port-display {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 10px;
+}
+
+.cabinet-title {
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+.cabinet-title h4 {
+    margin: 0 0 5px 0;
+    font-size: 14px;
+    color: #333;
+}
+
+.cabinet-title .port-info {
+    font-size: 12px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    background: #28a745;
+    color: white;
+}
+
+.selected-port-info {
+    margin-top: 8px;
+    padding: 4px 8px;
+    background: #e3f2fd;
+    border: 1px solid #2196F3;
+    border-radius: 4px;
+    font-size: 12px;
+    color: #1976D2;
+    text-align: center;
+}
+
+/* PORT CONNECTION INFO */
+.port-connection-info {
+    background: #f8f9fa;
+    border: 2px solid #28a745;
+    border-radius: 8px;
+    padding: 15px;
+    margin: 20px auto;
+    max-width: 500px;
+    text-align: center;
+}
+
+.port-connection-info h4 {
+    margin: 0 0 10px 0;
+    color: #28a745;
+    font-size: 16px;
+}
+
+.connection-details {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 15px;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.connection-details span {
+    padding: 5px 10px;
+    border-radius: 4px;
+    background: #e9ecef;
+}
+
+.connection-details span:nth-child(2) {
+    background: #28a745;
+    color: white;
+    font-size: 18px;
+}
+
+.create-connection-button {
+    padding: 10px 20px;
+    background: #28a745;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: bold;
+    transition: all 0.2s ease;
+}
+
+.create-connection-button:hover {
+    background: #218838;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+}
+
+/* Adjust building boxes container when ports are displayed */
+.building-boxes {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 40px;
+    height: auto;
+    min-height: 400px;
+    padding: 20px;
+    width: 100%;
+    max-width: 1500px;
+    margin: 0 auto;
+}
+
+/* PORT TOOLTIPS */
+.building-box .port-circle {
+    position: relative;
+}
+
+.building-box .port-circle:hover::after {
+    content: attr(title);
+    position: absolute;
+    bottom: 120%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #333;
+    color: white;
+    padding: 4px 6px;
+    border-radius: 3px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 1000;
+    pointer-events: none;
+}
+
+/* PORT ANIMATIONS */
+.port-circle.port-selected {
+    animation: port-pulse 1s infinite alternate;
+}
+
+.port-circle.port-cable-selected {
+    box-shadow: 0 0 0 1px blue;
+    border: 2px solid blue;
+}
+
+/* RESPONSIVE LAYOUT */
+@media (max-width: 1500px) {
+    .building-boxes.ports-mode {
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+        max-width: 100%;
+    }
+    
+    .building-box.has-ports-144 {
+        width: 500px;
+        height: 400px;
+    }
+    
+    .building-box.has-ports-72 {
+        width: 450px;
+        height: 300px;
+    }
+}
+
+@media (max-width: 768px) {
+    .building-box.has-ports {
+        width: 90vw;
+        max-width: 400px;
+    }
+    
+    .building-boxes.ports-mode {
+        flex-direction: column;
+        width: 100%;
+        padding: 10px;
+        gap: 15px;
+    }
+}

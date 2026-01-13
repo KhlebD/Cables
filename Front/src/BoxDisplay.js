@@ -3,7 +3,9 @@ import Store from './Store';
 import AddButton from './AddButton';
 import RemoveButton from './RemoveButton';
 import PortGrid from './PortGrid';
-import './styles.css';
+import './base.css';
+import './components.css';
+import './networkDisplay.css';
 
 function BoxDisplay({
     leftBuilding,

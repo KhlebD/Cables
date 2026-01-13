@@ -3,7 +3,9 @@ import Store from './Store';
 import AddButton from './AddButton';
 import RemoveButton from './RemoveButton';
 import EditButton from './EditButton';
-import './styles.css';
+import './base.css';
+import './components.css';
+import './networkDisplay.css';
 
 const BuildingGrid = ({ connectedBuildings, onBuildingSelect, onCableSelect, onCabinetSelect, onLeftPortSelect, onRightPortSelect, onFiberSelect, selectedBuilding }) => {
 
