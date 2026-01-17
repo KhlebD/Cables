@@ -24,7 +24,7 @@ Install dependencies:
 ---
 How to use
 - **Input Buildings**: For each building create cabinets. A cabinet may be a standalone panel, or a rack which only houses panels.
-![](Screenshots/Building_Cabinets.jpg)
+[![pic1](Screenshots/Buildings_Cabinets.jpg)](Screenshots/Buildings_Cabinets.jpg)
 - **Panels are endpoints for connections**: choose two panels and create a cable between them.
 - **Networks**: Choose a network for all fibers in a cable, or input networks for individual fibers.
 
