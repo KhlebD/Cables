@@ -3,7 +3,7 @@ Features:
 - Full API for creating, retrieving, connecting, updating, deleting operations for each component in the system.
 - PostgreSQL-enforced referential integrity and cascading behavior
 ---
-🧩 Architecture
+Architecture
 | Component             | Technology      |
 | --------------------- | --------------- |
 | Web API               | Python + Flask  |
