@@ -27,7 +27,7 @@ function EditButton({ itemType, fields, onUpdate, itemData }) {
 
     // close when click outside form
     useEffect(() => {
-        const handleClickOutside = (event) => {n
+        const handleClickOutside = (event) => {
             if (isPopupOpen && formRef.current && buttonRef.current && 
                 !formRef.current.contains(event.target) && 
                 !buttonRef.current.contains(event.target)) {
