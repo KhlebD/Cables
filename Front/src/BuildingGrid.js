@@ -15,6 +15,7 @@ const BuildingGrid = ({ connectedBuildings, onBuildingSelect, onCableSelect, onC
     const [isDragging, setIsDragging] = useState(false);
     const [showLeftIndicator, setShowLeftIndicator] = useState(false);
     const [showRightIndicator, setShowRightIndicator] = useState(false);
+    const [searchTerm, setSearchTerm] = useState(''); // NEW: Search state
     const gridRef = useRef(null);
     const gridContainerRef = useRef(null);
     const pageChangeTimerRef = useRef(null);
@@ -25,6 +26,13 @@ const BuildingGrid = ({ connectedBuildings, onBuildingSelect, onCableSelect, onC
         (a.order !== undefined && b.order !== undefined) ?
             a.order - b.order : 0
     );
+
+    // NEW: Filter buildings based on search term
+    const filteredBuildings = searchTerm
+        ? orderedBuildings.filter(building =>
+            building.name.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+        : orderedBuildings;
 
     // Initialize order if not already set
     useEffect(() => {
@@ -39,13 +47,18 @@ const BuildingGrid = ({ connectedBuildings, onBuildingSelect, onCableSelect, onC
         }
     }, [buildings, updateBuildingOrder]);
 
-    // Get buildings for current page
+    // NEW: Reset to page 0 when search term changes
+    useEffect(() => {
+        setCurrentPage(0);
+    }, [searchTerm]);
+
+    // Get buildings for current page (now uses filtered buildings)
     const getCurrentBuildings = () => {
         const start = currentPage * buildingsPerPage;
-        return orderedBuildings.slice(start, start + buildingsPerPage);
+        return filteredBuildings.slice(start, start + buildingsPerPage);
     };
 
-    const totalPages = Math.ceil(orderedBuildings.length / buildingsPerPage);
+    const totalPages = Math.ceil(filteredBuildings.length / buildingsPerPage);
 
     // Clean up timers on unmount
     useEffect(() => {
@@ -93,6 +106,16 @@ const BuildingGrid = ({ connectedBuildings, onBuildingSelect, onCableSelect, onC
 
             }
         }
+    };
+
+    // NEW: Handle search input change
+    const handleSearchChange = (e) => {
+        setSearchTerm(e.target.value);
+    };
+
+    // NEW: Clear search
+    const handleClearSearch = () => {
+        setSearchTerm('');
     };
 
     // Drag and drop handlers
@@ -209,6 +232,22 @@ const BuildingGrid = ({ connectedBuildings, onBuildingSelect, onCableSelect, onC
             ref={gridRef}
         >
             <h2 className="building-item connect top"> {selectedBuilding || 'בחר בניין'}</h2>
+
+            {/* NEW: Search bar */}
+            <div className="search-container">
+                <input
+                    type="text"
+                    placeholder="חפש בניין..."
+                    value={searchTerm}
+                    onChange={handleSearchChange}
+                    className="search-input"
+                />
+                {searchTerm && (
+                    <button onClick={handleClearSearch} className="clear-search-button">
+                        ✕
+                    </button>
+                )}
+            </div>
 
             <div className="navigation-buttons">
                 <button
