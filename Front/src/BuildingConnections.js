@@ -1,4 +1,4 @@
-import React, { useMemo, useRef } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 import BuildingGrid from './BuildingGrid';
 import Store from './Store';
 import AddButton from './AddButton';
@@ -12,6 +12,7 @@ function BuildingConnections({ onBuildingSelect, onCableSelect, selectedConnectB
     const buildings = Store(state => state.buildings);
     const selectedBuilding = buildings?.find(b => b.name === selectedConnectBuilding);
     const nodeRef = useRef(null);
+    const [isCabinetsCollapsed, setIsCabinetsCollapsed] = useState(false);
 
     // Function to group cabinets by parent-child relationships
     const groupCabinets = (cabinets) => {
@@ -158,6 +159,12 @@ function BuildingConnections({ onBuildingSelect, onCableSelect, selectedConnectB
             .map(cabinet => cabinet.identifier);
     }, [selectedBuilding]);
 
+    useEffect(() => {
+    if (selectedConnectBuilding) {
+        setIsCabinetsCollapsed(false);
+    }
+}, [selectedConnectBuilding]);
+
     const { parentCabinets, standaloneCabinets } = groupCabinets(selectedBuilding?.cabinets);
 
     return (
@@ -174,13 +181,15 @@ function BuildingConnections({ onBuildingSelect, onCableSelect, selectedConnectB
                         onLeftPortSelect={onLeftPortSelect}
                         onRightPortSelect={onRightPortSelect}
                         onFiberSelect={onFiberSelect}
+                        isCabinetsCollapsed={isCabinetsCollapsed}
+                        onToggleCabinets={() => setIsCabinetsCollapsed(prev => !prev)}
                     />
                 </div>
             </div>
 
             {/* Cabinets Section */}
             <CSSTransition
-                in={Boolean(selectedConnectBuilding)}
+                in={Boolean(selectedConnectBuilding) && !isCabinetsCollapsed}
                 timeout={300}
                 classNames="section"
                 unmountOnExit

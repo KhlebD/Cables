@@ -77,7 +77,7 @@ const FiberDisplay = ({ selectedCable, selectedFiber, onFiberSelect, onLeftPortS
                                 y="20"
                                 width={viewportWidth - 20}
                                 height="30"
-                                fill="#e0e0e0"
+                                fill="#2196F3"
                                 rx="5"
                             />
                             <text
@@ -202,7 +202,7 @@ const FiberDisplay = ({ selectedCable, selectedFiber, onFiberSelect, onLeftPortS
                                 y={50 + (Math.ceil(fibers.length / 12) * 270) + 30}
                                 width={viewportWidth - 20}
                                 height="30"
-                                fill="#e0e0e0"
+                                fill="#2196F3"
                                 rx="5"
                             />
                             <text

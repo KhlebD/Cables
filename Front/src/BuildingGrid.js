@@ -5,7 +5,9 @@ import RemoveButton from './RemoveButton';
 import EditButton from './EditButton';
 import './styles.css';
 
-const BuildingGrid = ({ connectedBuildings, onBuildingSelect, onCableSelect, onCabinetSelect, onLeftPortSelect, onRightPortSelect, onFiberSelect, selectedBuilding }) => {
+const BuildingGrid = ({ connectedBuildings, onBuildingSelect, onCableSelect, onCabinetSelect,
+    onLeftPortSelect, onRightPortSelect, onFiberSelect, selectedBuilding,
+    isCabinetsCollapsed, onToggleCabinets }) => {
 
     const buildings = Store(state => state.buildings);
     const updateBuildingOrder = Store(state => state.updateBuildingOrder);
@@ -20,6 +22,7 @@ const BuildingGrid = ({ connectedBuildings, onBuildingSelect, onCableSelect, onC
     const gridContainerRef = useRef(null);
     const pageChangeTimerRef = useRef(null);
     const buildingsPerPage = 20;
+
 
     // Get ordered buildings
     const orderedBuildings = [...buildings].sort((a, b) =>
@@ -225,6 +228,7 @@ const BuildingGrid = ({ connectedBuildings, onBuildingSelect, onCableSelect, onC
         // Clean up all drag states after successful drop
         cleanupDragStates();
     };
+    
 
     return (
         <div
@@ -365,6 +369,15 @@ const BuildingGrid = ({ connectedBuildings, onBuildingSelect, onCableSelect, onC
                     }}
                 />)}
             </div>
+            {selectedBuilding && (
+                <button
+                    className="collapse-toggle-button"
+                    onClick={onToggleCabinets}
+                    title={isCabinetsCollapsed ? 'הצג ארונות' : 'הסתר ארונות'}
+                >
+                    {isCabinetsCollapsed ? '▼' : '▲'}
+                </button>
+            )}
         </div>
     );
 }
