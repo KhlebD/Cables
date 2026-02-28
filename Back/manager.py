@@ -119,7 +119,8 @@ def init_db():
         
         # Commit main table creation
         conn.commit()
-        
+
+         
     except Exception as e:
         print(f"Error creating main tables: {e}")
         conn.rollback()
@@ -157,6 +158,17 @@ def init_db():
             
     except psycopg2.Error as e:
         print(f"Port reference columns already exist: {e}")
+        conn.rollback()
+    try:
+        cursor.execute("ALTER TABLE ports ADD COLUMN side TEXT DEFAULT 'back'")
+        conn.commit()
+    except psycopg2.Error:
+        conn.rollback()
+
+    try:
+        cursor.execute("ALTER TABLE fibers ADD COLUMN side TEXT DEFAULT 'back'")
+        conn.commit()
+    except psycopg2.Error:
         conn.rollback()
     
     # Final verification
@@ -275,7 +287,8 @@ def get_network():
                             "fiber_type": fiber["fiber_type"],
                             "network": fiber["network"],
                             "port_cabinet1": fiber["port1_number"],
-                            "port_cabinet2": fiber["port2_number"]
+                            "port_cabinet2": fiber["port2_number"],
+                            "side": fiber["side"] 
                         }
                         cable_info["fibers"].append(fiber_info)
                     
@@ -423,6 +436,7 @@ def add_cable():
     cable_type = data.get('cable_type') if data else None
     cabinet1_start = data.get('cabinet1_start') if data else None
     cabinet2_start = data.get('cabinet2_start') if data else None
+    side = data.get('side', 'back') if data else 'back'
     
     if not all([cable_id, cabinet1, cabinet2, number, num_of_fibers, cable_type, cabinet1_start, cabinet2_start]):
         return jsonify({'error': 'Invalid data'}), 400
