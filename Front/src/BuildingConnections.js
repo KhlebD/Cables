@@ -13,7 +13,15 @@ function BuildingConnections({ onBuildingSelect, onCableSelect, selectedConnectB
     const selectedBuilding = buildings?.find(b => b.name === selectedConnectBuilding);
     const nodeRef = useRef(null);
     const [isCabinetsCollapsed, setIsCabinetsCollapsed] = useState(false);
-
+    const ACTIVE_TYPES = ['מתג', 'נתב'];
+    const CABINET_ICONS = {
+        'ארון': '🗄️',
+        'פאנל': '☰',
+        'באקבון': '⬡',
+        'חפרפר': '⬇',
+        'מתג': '⇄',
+        'נתב': '⊕'
+    };
     // Function to group cabinets by parent-child relationships
     const groupCabinets = (cabinets) => {
         if (!cabinets) return { parentCabinets: [], standaloneCabinets: [] };
@@ -160,10 +168,10 @@ function BuildingConnections({ onBuildingSelect, onCableSelect, selectedConnectB
     }, [selectedBuilding]);
 
     useEffect(() => {
-    if (selectedConnectBuilding) {
-        setIsCabinetsCollapsed(false);
-    }
-}, [selectedConnectBuilding]);
+        if (selectedConnectBuilding) {
+            setIsCabinetsCollapsed(false);
+        }
+    }, [selectedConnectBuilding]);
 
     const { parentCabinets, standaloneCabinets } = groupCabinets(selectedBuilding?.cabinets);
 
@@ -213,28 +221,58 @@ function BuildingConnections({ onBuildingSelect, onCableSelect, selectedConnectB
                                 >
                                     <div className="cabinet-header">
                                         <span className="identifier">{cabinet.identifier}</span>
-                                        <span className="cabinet-type">{cabinet.cabinet_type}</span>
+                                        <span className="cabinet-type">
+                                            {CABINET_ICONS[cabinet.cabinet_type] || ''} {cabinet.cabinet_type}
+                                        </span>
                                     </div>
 
                                     {/* Panels inside the cabinet */}
                                     <div className="panels-grid">
-                                        {cabinet.panels.map(panel => (
-                                            <div
-                                                key={panel.identifier}
-                                                className={`panel-item 
-                                                    ${selectedCabinet?.identifier === panel.identifier ? 'selected' : ''} 
-                                                    ${connectedCabinets.includes(panel.identifier) ? 'connected' : ''}`}
-                                                onClick={(e) => {
-                                                    e.stopPropagation(); // Prevent parent cabinet click
-                                                    handleCabinetClick(panel);
-                                                }}
-                                            >
-                                                <div className="panel-identifier">{panel.identifier}</div>
-                                                <div className="panel-type">{panel.cabinet_type}</div>
-                                                <div className="panel-type">{panel.port_count}</div>
-                                            </div>
-                                        ))}
+                                        {cabinet.panels
+                                            .filter(p => !ACTIVE_TYPES.includes(p.cabinet_type))
+                                            .map(panel => (
+                                                <div
+                                                    key={panel.identifier}
+                                                    className={`panel-item 
+                    ${selectedCabinet?.identifier === panel.identifier ? 'selected' : ''} 
+                    ${connectedCabinets.includes(panel.identifier) ? 'connected' : ''}`}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleCabinetClick(panel);
+                                                    }}
+                                                >
+                                                    <div className="panel-identifier">{panel.identifier}</div>
+                                                    <div className="panel-type">{CABINET_ICONS[panel.cabinet_type] || ''} {panel.cabinet_type}</div>
+                                                    <div className="panel-type">{panel.port_count}</div>
+                                                </div>
+                                            ))}
                                     </div>
+
+                                    {cabinet.panels.some(p => ACTIVE_TYPES.includes(p.cabinet_type)) && (
+                                        <>
+                                            <div className="cabinet-divider" />
+                                            <div className="panels-grid">
+                                                {cabinet.panels
+                                                    .filter(p => ACTIVE_TYPES.includes(p.cabinet_type))
+                                                    .map(panel => (
+                                                        <div
+                                                            key={panel.identifier}
+                                                            className={`panel-item 
+                                                                ${selectedCabinet?.identifier === panel.identifier ? 'selected' : ''} 
+                                                                ${connectedCabinets.includes(panel.identifier) ? 'connected' : ''}`}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleCabinetClick(panel);
+                                                            }}
+                                                        >
+                                                            <div className="panel-identifier">{panel.identifier}</div>
+                                                            <div className="panel-type">{CABINET_ICONS[panel.cabinet_type] || ''} {panel.cabinet_type}</div>
+                                                            <div className="panel-type">{panel.port_count}</div>
+                                                        </div>
+                                                    ))}
+                                            </div>
+                                        </>
+                                    )}
                                 </div>
                             </div>
                         ))}
@@ -249,7 +287,9 @@ function BuildingConnections({ onBuildingSelect, onCableSelect, selectedConnectB
                                 onClick={() => handleCabinetClick(cabinet)}
                             >
                                 <div className="identifier">{cabinet.identifier}</div>
-                                <div className="cabinet-type">{cabinet.cabinet_type}</div>
+                                <div className="cabinet-type">
+                                    {CABINET_ICONS[cabinet.cabinet_type] || ''} {cabinet.cabinet_type}
+                                </div>
                                 <div className="cabinet-type">{cabinet.port_count}</div>
                             </div>
                         ))}
@@ -271,7 +311,7 @@ function BuildingConnections({ onBuildingSelect, onCableSelect, selectedConnectB
                                     label: 'סוג',
                                     type: 'select',
                                     required: true,
-                                    options: ['ארון', 'חפרפר', 'באקבון', 'פאנל']
+                                    options: ['ארון', 'חפרפר', 'באקבון', 'פאנל', 'מתג', 'נתב']
                                 },
                                 {
                                     name: 'parent_cabinet',
@@ -325,7 +365,7 @@ function BuildingConnections({ onBuildingSelect, onCableSelect, selectedConnectB
                                         label: 'סוג',
                                         type: 'select',
                                         required: true,
-                                        options: ['ארון', 'חפרפר', 'באקבון', 'פאנל']
+                                        options: ['ארון', 'חפרפר', 'באקבון', 'פאנל', 'מתג', 'נתב']
                                     },
                                     {
                                         name: 'parent_cabinet',
