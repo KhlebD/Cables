@@ -167,7 +167,7 @@ const Store = create((set, get) => ({
         }
     },
 
-    addCable: async (cabinet1, cabinet2, number, num_of_fibers, cable_type, cabinet1_start, cabinet2_start) => {
+    addCable: async (cabinet1, cabinet2, number, num_of_fibers, cable_type, cabinet1_start, cabinet2_start, side = 'back') => {
         const cableID = `${Date.now()}_${Math.floor(Math.random() * 9000) + 1000}`;
         try {
             const response = await fetch('http://localhost:5001/cables/add', {
@@ -184,6 +184,7 @@ const Store = create((set, get) => ({
                     cable_type: cable_type,
                     cabinet1_start: cabinet1_start,
                     cabinet2_start: cabinet2_start,
+                    side: side,
                 })
             });
 
@@ -214,7 +215,8 @@ const Store = create((set, get) => ({
                                         fiber_type: "0",
                                         network: null,
                                         port_cabinet1: null,
-                                        port_cabinet2: null
+                                        port_cabinet2: null,
+                                        side: side
                                     }))
                                 }]
                             };

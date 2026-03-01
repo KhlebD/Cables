@@ -487,61 +487,6 @@ function BoxDisplay({
                 </div>
             </div>
 
-            {/* Port Connection Display - Show when both cabinets have ports and ports are selected */}
-            {!!shouldDisplayPorts(leftCabinetObj) && !!shouldDisplayPorts(rightCabinetObj) &&
-                (selectedLeftPort || selectedRightPort) && (
-                    <div className="port-connection-info">
-                        <h4>חיבור פורטים</h4>
-                        <div className="connection-details">
-                            <span>פורט שמאל: {selectedLeftPort || 'לא נבחר'}</span>
-                            <span>↔</span>
-                            <span>פורט ימין: {selectedRightPort || 'לא נבחר'}</span>
-                        </div>
-                        {selectedLeftPort && selectedRightPort && (
-                            <AddButton
-                                itemType="חיבור סיב"
-                                initialValues={{
-                                    cabinet1: leftCabinetObj.identifier,
-                                    cabinet2: rightCabinetObj.identifier,
-                                    cabinet1_start: selectedLeftPort,
-                                    cabinet2_start: selectedRightPort,
-                                    num_of_fibers: 1
-                                }}
-                                fields={[
-                                    {
-                                        name: 'number',
-                                        label: 'שם החיבור',
-                                        type: 'text',
-                                        required: true,
-                                        placeholder: 'הכנס שם לחיבור הסיב'
-                                    },
-                                    {
-                                        name: 'cable_type',
-                                        label: 'סוג סיב',
-                                        type: 'select',
-                                        required: true,
-                                        options: ['Single', 'Multi']
-                                    }
-                                ]}
-                                onAdd={async (formData) => {
-                                    await Store.getState().addCable(
-                                        leftCabinetObj.identifier,
-                                        rightCabinetObj.identifier,
-                                        formData.number,
-                                        1, // Always 1 fiber for individual connections
-                                        formData.cable_type,
-                                        selectedLeftPort,
-                                        selectedRightPort
-                                    );
-                                    // Reset selections after connection
-                                    onLeftPortSelect(null);
-                                    onRightPortSelect(null);
-                                }}
-                            />
-                        )}
-                    </div>
-                )}
-
             {/* Add/Remove Buttons */}
             <div className='add-remove-container'>
                 {/* Show add cable when both buildings selected */}

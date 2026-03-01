@@ -271,7 +271,7 @@ def get_network():
                     # Get fibers for this cable with port information
                     cursor.execute('''
                     SELECT f.number_cabinet1, f.number_cabinet2, f.fiber_type, f.network,
-                           p1.port_number as port1_number, p2.port_number as port2_number
+                           p1.port_number as port1_number, p2.port_number as port2_number, f.side
                     FROM fibers f
                     LEFT JOIN ports p1 ON f.port_cabinet1_id = p1.id
                     LEFT JOIN ports p2 ON f.port_cabinet2_id = p2.id
@@ -458,8 +458,8 @@ def add_cable():
         # Check if all required ports are available in cabinet1
         cursor.execute('''
             SELECT port_number FROM ports 
-            WHERE cabinet_id = %s AND port_number = ANY(%s) AND status != 'available'
-        ''', (cabinet1, cabinet1_ports_needed))
+        WHERE cabinet_id = %s AND port_number = ANY(%s) AND status != 'available' AND side = %s
+        ''', (cabinet1, cabinet1_ports_needed, side))
         occupied_ports_cab1 = [row[0] for row in cursor.fetchall()]
         
         if occupied_ports_cab1:
@@ -470,8 +470,8 @@ def add_cable():
         # Check if all required ports are available in cabinet2
         cursor.execute('''
             SELECT port_number FROM ports 
-            WHERE cabinet_id = %s AND port_number = ANY(%s) AND status != 'available'
-        ''', (cabinet2, cabinet2_ports_needed))
+            WHERE cabinet_id = %s AND port_number = ANY(%s) AND status != 'available' AND side = %s
+        ''', (cabinet2, cabinet2_ports_needed, side))
         occupied_ports_cab2 = [row[0] for row in cursor.fetchall()]
         
         if occupied_ports_cab2:
@@ -526,14 +526,14 @@ def add_cable():
             
             # Create fiber with port assignments
             cursor.execute(
-                '''INSERT INTO fibers (number_cabinet1, number_cabinet2, fiber_type, cable_id, port_cabinet1_id, port_cabinet2_id) 
-                   VALUES (%s, %s, %s, %s, %s, %s)''',
-                (fiber_cab1_number, fiber_cab2_number, "0", cable_id, port1_id, port2_id)
+                '''INSERT INTO fibers (number_cabinet1, number_cabinet2, fiber_type, cable_id, port_cabinet1_id, port_cabinet2_id, side) 
+                   VALUES (%s, %s, %s, %s, %s, %s, %s)''',
+                (fiber_cab1_number, fiber_cab2_number, "0", cable_id, port1_id, port2_id, side)
             )
             
             # Mark ports as occupied
-            cursor.execute('UPDATE ports SET status = %s WHERE id IN (%s, %s)', 
-                         ('occupied', port1_id, port2_id))
+            cursor.execute("UPDATE ports SET status = 'occupied', side = %s WHERE id IN (%s, %s)", 
+                         (side, port1_id, port2_id))
         
         conn.commit()
         print(f"✅ Cable {cable_id} created with {num_fibers} fibers and ports assigned")
