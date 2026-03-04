@@ -1733,3 +1733,38 @@ ul {
     color: #aaa;
     text-align: center;
 }
+
+.modal-component-card.selected-left {
+    border-color: #2196F3;
+    background: #e3f2fd;
+    color: #1565c0;
+}
+
+.modal-component-card.selected-right {
+    border-color: #4CAF50;
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+
+.modal-component-card {
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.modal-component-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.modal-component-side-tag {
+    font-size: 10px;
+    margin-top: 4px;
+    opacity: 0.7;
+}
+
+.modal-port-placeholder {
+    color: #aaa;
+    font-size: 13px;
+    padding: 20px;
+    text-align: center;
+}
