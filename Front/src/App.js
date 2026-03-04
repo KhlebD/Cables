@@ -3,10 +3,11 @@ import BuildingConnections from './BuildingConnections';
 import FiberDisplay from './FiberDisplay';
 import Store from './Store';
 import BoxDisplay from './BoxDisplay';
+import CabinetModal from './CabinetModal';
 
 export default function App() {
     const fetchNetwork = Store(state => state.fetchNetwork);
-    
+
     const [selectedGridBuilding, setSelectedGridBuilding] = useState(null);
     const [selectedConnectBuilding, setSelectedConnectBuilding] = useState(null);
     const [selectedGridCabinet, setSelectedGridCabinet] = useState(null);
@@ -15,7 +16,8 @@ export default function App() {
     const [selectedFiber, setSelectedFiber] = useState(null);
     const [selectedLeftPort, setSelectedLeftPort] = useState(null);
     const [selectedRightPort, setSelectedRightPort] = useState(null);
-    
+    const [cabinetModalData, setCabinetModalData] = useState(null);
+
     useEffect(() => {
         fetchNetwork().then(result => {
         }).catch(err => {
@@ -37,7 +39,8 @@ export default function App() {
                         filterByCabinet={selectedConnectCabinet}
                         onLeftPortSelect={setSelectedLeftPort}
                         onRightPortSelect={setSelectedRightPort}
-                        onFiberSelect= {setSelectedFiber}
+                        onFiberSelect={setSelectedFiber}
+                        onCabinetDoubleClick={(cabinet) => setCabinetModalData(cabinet)}
                     />
                 </div>
                 <div className="right-section">
@@ -51,8 +54,10 @@ export default function App() {
                         filterByCabinet={selectedGridCabinet}
                         onLeftPortSelect={setSelectedLeftPort}
                         onRightPortSelect={setSelectedRightPort}
-                        onFiberSelect= {setSelectedFiber}
+                        onFiberSelect={setSelectedFiber}
+                        onCabinetDoubleClick={(cabinet) => setCabinetModalData(cabinet)}
                     />
+
                 </div>
             </div>
             <div className="box-fiber-page">
@@ -61,26 +66,33 @@ export default function App() {
                     rightBuilding={selectedConnectBuilding}
                     selectedCable={selectedCable}
                     onCableSelect={setSelectedCable}
-                    selectedLeftCabinet={selectedGridCabinet}  
+                    selectedLeftCabinet={selectedGridCabinet}
                     selectedRightCabinet={selectedConnectCabinet}
-                    selectedLeftPort = {selectedLeftPort}
-                    selectedRightPort = {selectedRightPort}
-                    onLeftBuildingSelect = {setSelectedGridBuilding}
-                    onRightBuildingSelect = {setSelectedConnectBuilding}
-                    onLeftCabinetSelect = {setSelectedGridCabinet}
-                    onRightCabinetSelect = {setSelectedConnectCabinet}
-                    onLeftPortSelect = {setSelectedLeftPort}
-                    onRightPortSelect = {setSelectedRightPort}
-                    onFiberSelect= {setSelectedFiber}
+                    selectedLeftPort={selectedLeftPort}
+                    selectedRightPort={selectedRightPort}
+                    onLeftBuildingSelect={setSelectedGridBuilding}
+                    onRightBuildingSelect={setSelectedConnectBuilding}
+                    onLeftCabinetSelect={setSelectedGridCabinet}
+                    onRightCabinetSelect={setSelectedConnectCabinet}
+                    onLeftPortSelect={setSelectedLeftPort}
+                    onRightPortSelect={setSelectedRightPort}
+                    onFiberSelect={setSelectedFiber}
                 />
                 <FiberDisplay
                     selectedCable={selectedCable}
                     selectedFiber={selectedFiber}
                     onFiberSelect={setSelectedFiber}
-                    onLeftPortSelect = {setSelectedLeftPort}
-                    onRightPortSelect = {setSelectedRightPort}
+                    onLeftPortSelect={setSelectedLeftPort}
+                    onRightPortSelect={setSelectedRightPort}
                 />
             </div>
+            {cabinetModalData && (
+                <CabinetModal
+                    cabinet={cabinetModalData}
+                    onClose={() => setCabinetModalData(null)}
+                />
+            )}
+            
         </div>
     )
 };

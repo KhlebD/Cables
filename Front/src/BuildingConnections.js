@@ -7,7 +7,9 @@ import EditButton from './EditButton';
 import './styles.css';
 import { CSSTransition } from 'react-transition-group';
 
-function BuildingConnections({ onBuildingSelect, onCableSelect, selectedConnectBuilding, selectedCabinet, onCabinetSelect, onLeftPortSelect, onRightPortSelect, onFiberSelect, filterBy, filterByCabinet }) {
+function BuildingConnections({ onBuildingSelect, onCableSelect, selectedConnectBuilding, selectedCabinet, onCabinetSelect,
+    onLeftPortSelect, onRightPortSelect, onFiberSelect, filterBy,
+    filterByCabinet, onCabinetDoubleClick }) {
 
     const buildings = Store(state => state.buildings);
     const selectedBuilding = buildings?.find(b => b.name === selectedConnectBuilding);
@@ -218,6 +220,7 @@ function BuildingConnections({ onBuildingSelect, onCableSelect, selectedConnectB
                                         ${selectedCabinet?.identifier === cabinet.identifier ? 'selected' : ''} 
                                         ${connectedCabinets.includes(cabinet.identifier) ? 'connected' : ''}`}
                                     onClick={() => handleCabinetClick(cabinet)}
+                                    onDoubleClick={() => onCabinetDoubleClick(cabinet)}
                                 >
                                     <div className="cabinet-header">
                                         <span className="identifier">{cabinet.identifier}</span>
@@ -234,8 +237,8 @@ function BuildingConnections({ onBuildingSelect, onCableSelect, selectedConnectB
                                                 <div
                                                     key={panel.identifier}
                                                     className={`panel-item 
-                    ${selectedCabinet?.identifier === panel.identifier ? 'selected' : ''} 
-                    ${connectedCabinets.includes(panel.identifier) ? 'connected' : ''}`}
+                                                        ${selectedCabinet?.identifier === panel.identifier ? 'selected' : ''} 
+                                                        ${connectedCabinets.includes(panel.identifier) ? 'connected' : ''}`}
                                                     onClick={(e) => {
                                                         e.stopPropagation();
                                                         handleCabinetClick(panel);
