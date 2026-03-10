@@ -170,7 +170,20 @@ def init_db():
         conn.commit()
     except psycopg2.Error:
         conn.rollback()
-    
+    try:
+        cursor.execute("ALTER TABLE ports ADD COLUMN status_back TEXT DEFAULT 'available'")
+        cursor.execute("ALTER TABLE ports ADD COLUMN status_front TEXT DEFAULT 'available'")
+        conn.commit()
+    except psycopg2.Error:
+        conn.rollback()
+
+    try:
+        # Migrate existing status into status_back since all existing connections are back
+        cursor.execute("UPDATE ports SET status_back = status WHERE status != 'available'")
+        conn.commit()
+    except psycopg2.Error:
+        conn.rollback()
+
     # Final verification
     try:
         cursor.execute("""
@@ -185,6 +198,7 @@ def init_db():
         conn.close()
         print("Database initialization completed!")
 
+    
 # RETRIEVE ALL
 @app.route('/database', methods=['GET'])
 def get_network():
@@ -232,7 +246,7 @@ def get_network():
                 # Get ports for this cabinet
 
                 cursor.execute('''
-                SELECT id, port_number, status 
+                SELECT id, port_number, status_back, status_front 
                 FROM ports 
                 WHERE cabinet_id = %s 
                 ORDER BY port_number
@@ -243,7 +257,8 @@ def get_network():
                     cabinet_info["ports"].append({
                         "id": port["id"],
                         "port_number": port["port_number"],
-                        "status": port["status"]
+                        "status_back": port["status_back"],
+                        "status_front": port["status_front"]
                     })
                 
                 # Get cables connected to this cabinet                
@@ -452,14 +467,13 @@ def add_cable():
         cabinet1_ports_needed = list(range(int(cabinet1_start), int(cabinet1_start) + num_fibers))
         cabinet2_ports_needed = list(range(int(cabinet2_start), int(cabinet2_start) + num_fibers))
         
-        print(f"   🎯 Cabinet1 {cabinet1} needs ports: {cabinet1_ports_needed}")
-        print(f"   🎯 Cabinet2 {cabinet2} needs ports: {cabinet2_ports_needed}")
-        
+        status_column = 'status_front' if side == 'front' else 'status_back'
         # Check if all required ports are available in cabinet1
-        cursor.execute('''
+        
+        cursor.execute(f'''
             SELECT port_number FROM ports 
-        WHERE cabinet_id = %s AND port_number = ANY(%s) AND status != 'available' AND side = %s
-        ''', (cabinet1, cabinet1_ports_needed, side))
+            WHERE cabinet_id = %s AND port_number = ANY(%s) AND {status_column} != 'available'
+            ''', (cabinet1, cabinet1_ports_needed))
         occupied_ports_cab1 = [row[0] for row in cursor.fetchall()]
         
         if occupied_ports_cab1:
@@ -468,10 +482,11 @@ def add_cable():
             }), 400
         
         # Check if all required ports are available in cabinet2
-        cursor.execute('''
+        
+        cursor.execute(f'''
             SELECT port_number FROM ports 
-            WHERE cabinet_id = %s AND port_number = ANY(%s) AND status != 'available' AND side = %s
-        ''', (cabinet2, cabinet2_ports_needed, side))
+            WHERE cabinet_id = %s AND port_number = ANY(%s) AND {status_column} != 'available'
+            ''', (cabinet1, cabinet1_ports_needed))
         occupied_ports_cab2 = [row[0] for row in cursor.fetchall()]
         
         if occupied_ports_cab2:
@@ -532,8 +547,8 @@ def add_cable():
             )
             
             # Mark ports as occupied
-            cursor.execute("UPDATE ports SET status = 'occupied', side = %s WHERE id IN (%s, %s)", 
-                         (side, port1_id, port2_id))
+            cursor.execute(f"UPDATE ports SET {status_column} = 'occupied' WHERE id IN (%s, %s)",
+               (port1_id, port2_id))
         
         conn.commit()
         print(f"✅ Cable {cable_id} created with {num_fibers} fibers and ports assigned")
@@ -628,7 +643,7 @@ def remove_cable(cable_id):
     try:
         # First, get all ports that are assigned to fibers of this cable
         cursor.execute('''
-            SELECT f.port_cabinet1_id, f.port_cabinet2_id
+            SELECT f.port_cabinet1_id, f.port_cabinet2_id, f.side
             FROM fibers f
             WHERE f.cable_id = %s AND (f.port_cabinet1_id IS NOT NULL OR f.port_cabinet2_id IS NOT NULL)
         ''', (cable_id,))
@@ -637,13 +652,12 @@ def remove_cable(cable_id):
         # Collect all port IDs that need to be freed
         port_ids_to_free = []
         for assignment in port_assignments:
-            if assignment[0]:  # port_cabinet1_id
-                port_ids_to_free.append(assignment[0])
-            if assignment[1]:  # port_cabinet2_id
-                port_ids_to_free.append(assignment[1])
-        
-        print(f"🔄 Freeing {len(port_ids_to_free)} ports for cable {cable_id}")
-        
+            status_column = 'status_front' if assignment[2] == 'front' else 'status_back'
+            if assignment[0]:
+                cursor.execute(f"UPDATE ports SET {status_column} = 'available' WHERE id = %s", (assignment[0],))
+            if assignment[1]:
+                cursor.execute(f"UPDATE ports SET {status_column} = 'available' WHERE id = %s", (assignment[1],))
+
         # Free the ports before deleting the cable
         if port_ids_to_free:
             cursor.execute('''

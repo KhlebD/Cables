@@ -5,8 +5,7 @@ const PortGrid = ({
     onPortSelect,
     selectedPort,
     occupiedPorts = [],
-    cablePorts= [],  
-    side = 'left' // 'left' or 'right' for styling purposes
+    cablePorts= []
 }) => {
     const getPortLayout = (count) => {
         switch(count) {
@@ -104,8 +103,7 @@ const PortGrid = ({
     const gridClasses = [
         'port-grid',
         `port-grid-${portCount}`,
-        `port-grid-${layout.layout}`,
-        `port-grid-${side}`
+        `port-grid-${layout.layout}`
     ].join(' ');
 
     return (

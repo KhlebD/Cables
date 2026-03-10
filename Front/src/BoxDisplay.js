@@ -45,6 +45,7 @@ function BoxDisplay({
         cabinetObj.cables.forEach(cable => {
             if (cable.fibers) {
                 cable.fibers.forEach(fiber => {
+                    if (fiber.side !== 'back') return;
                     // Check which cabinet we're looking at and get the appropriate port
                     if (cable.cabinet1 === cabinetObj.identifier && fiber.port_cabinet1) {
                         occupiedPorts.push(parseInt(fiber.port_cabinet1));
@@ -139,6 +140,7 @@ function BoxDisplay({
 
             // Find the fiber that uses this port
             const fiber = cable.fibers.find(f => {
+                if (f.side !== 'back') return false;
                 if (cable.cabinet1 === fromCabinet.identifier) {
                     return parseInt(f.port_cabinet1) === fromPort;
                 } else if (cable.cabinet2 === fromCabinet.identifier) {
@@ -387,7 +389,6 @@ function BoxDisplay({
                                         selectedPort={selectedLeftPort}
                                         occupiedPorts={leftOccupiedPorts}
                                         cablePorts={leftCablePorts}
-                                        side="left"
                                     />
                                 </div>
                             )}
@@ -474,7 +475,6 @@ function BoxDisplay({
                                         selectedPort={selectedRightPort}
                                         occupiedPorts={rightOccupiedPorts}
                                         cablePorts={rightCablePorts}
-                                        side="right"
                                     />
                                 </div>
                             )}

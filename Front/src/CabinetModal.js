@@ -240,14 +240,16 @@ function CabinetModal({ cabinet, onClose }) {
                             {leftObj ? (
                                 <>
                                     <div className="modal-port-title">{leftObj.identifier}</div>
-                                    <PortGrid
-                                        portCount={leftObj.port_count}
-                                        onPortSelect={handleLeftPortSelect}
-                                        selectedPort={selectedLeftPort}
-                                        occupiedPorts={leftOccupied}
-                                        cablePorts={leftCablePorts}
-                                        side="left"
-                                    />
+                                    <div style={{ direction: 'rtl' }}>
+                                        <PortGrid
+                                            portCount={leftObj.port_count}
+                                            onPortSelect={handleLeftPortSelect}
+                                            selectedPort={selectedLeftPort}
+                                            occupiedPorts={leftOccupied}
+                                            cablePorts={leftCablePorts}
+                                            side="right"
+                                        />
+                                    </div>
                                 </>
                             ) : (
                                 <div className="modal-port-placeholder">בחר רכיב שמאל</div>
@@ -314,14 +316,16 @@ function CabinetModal({ cabinet, onClose }) {
                             {rightObj ? (
                                 <>
                                     <div className="modal-port-title">{rightObj.identifier}</div>
+                                    <div style={{ direction: 'rtl' }}>
                                     <PortGrid
                                         portCount={rightObj.port_count}
                                         onPortSelect={handleRightPortSelect}
                                         selectedPort={selectedRightPort}
                                         occupiedPorts={rightOccupied}
                                         cablePorts={rightCablePorts}
-                                        side="right"
+                                        side="left"
                                     />
+                                    </div>
                                 </>
                             ) : (
                                 <div className="modal-port-placeholder">בחר רכיב ימין</div>
