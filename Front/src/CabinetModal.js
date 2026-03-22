@@ -155,7 +155,33 @@ function CabinetModal({ cabinet, onClose }) {
 
     const leftOccupied = useMemo(() => getOccupiedFrontPorts(leftObj), [leftObj]);
     const rightOccupied = useMemo(() => getOccupiedFrontPorts(rightObj), [rightObj]);
+    const leftConnectedPorts = useMemo(() => {
+        if (!leftObj) return [];
+        const ports = [];
+        frontCables.forEach(cable => {
+            cable.fibers?.filter(f => f.side === 'front').forEach(f => {
+                if (cable.cabinet1 === leftObj.identifier && f.port_cabinet1)
+                    ports.push(parseInt(f.port_cabinet1));
+                else if (cable.cabinet2 === leftObj.identifier && f.port_cabinet2)
+                    ports.push(parseInt(f.port_cabinet2));
+            });
+        });
+        return ports;
+    }, [leftObj, frontCables]);
 
+    const rightConnectedPorts = useMemo(() => {
+        if (!rightObj) return [];
+        const ports = [];
+        frontCables.forEach(cable => {
+            cable.fibers?.filter(f => f.side === 'front').forEach(f => {
+                if (cable.cabinet1 === rightObj.identifier && f.port_cabinet1)
+                    ports.push(parseInt(f.port_cabinet1));
+                else if (cable.cabinet2 === rightObj.identifier && f.port_cabinet2)
+                    ports.push(parseInt(f.port_cabinet2));
+            });
+        });
+        return ports;
+    }, [rightObj, frontCables]);
     const leftCablePorts = useMemo(() => {
         if (!leftObj || !selectedCable) return [];
         const cable = leftObj.cables?.find(c => c.uid === selectedCable);
@@ -215,9 +241,14 @@ function CabinetModal({ cabinet, onClose }) {
                     ) : (
                         <>
                             {passiveChildren.length > 0 && (
-                                <div className="modal-component-row">
-                                    {passiveChildren.map(renderComponent)}
-                                </div>
+                                <>
+                                    <div className="modal-category-divider">
+                                        <span>פאנלים</span>
+                                    </div>
+                                    <div className="modal-component-row">
+                                        {passiveChildren.map(renderComponent)}
+                                    </div>
+                                </>
                             )}
                             {passiveChildren.length > 0 && activeChildren.length > 0 && (
                                 <div className="modal-category-divider">
@@ -247,6 +278,7 @@ function CabinetModal({ cabinet, onClose }) {
                                             selectedPort={selectedLeftPort}
                                             occupiedPorts={leftOccupied}
                                             cablePorts={leftCablePorts}
+                                            connectedPorts={leftConnectedPorts}
                                             side="right"
                                         />
                                     </div>
@@ -268,7 +300,7 @@ function CabinetModal({ cabinet, onClose }) {
                                         setSelectedCable(prev => prev === cable.uid ? null : cable.uid);
                                     }}
                                 >
-                                    {cable.number} ({cable.num_of_fibers} סיבים)
+                                    {cable.number} סיב
                                 </div>
                             ))}
                             {leftObj && rightObj && frontCables.length === 0 && (
@@ -277,7 +309,11 @@ function CabinetModal({ cabinet, onClose }) {
                             {leftObj && rightObj && (
                                 <div className="add-remove-container" style={{ flexDirection: 'column', marginTop: 12 }}>
                                     <AddButton
-                                        itemType="כבל חזית"
+                                        itemType="כבל"
+                                        initialValues={{
+                                            cabinet1_start: selectedLeftPort || '',
+                                            cabinet2_start: selectedRightPort || ''
+                                        }}
                                         fields={[
                                             { name: 'number', label: 'מזהה כבל', type: 'text', required: true },
                                             { name: 'num_of_fibers', label: 'מספר סיבים', type: 'select', required: true, options: ['1', '2', '4', '6', '12'] },
@@ -317,14 +353,15 @@ function CabinetModal({ cabinet, onClose }) {
                                 <>
                                     <div className="modal-port-title">{rightObj.identifier}</div>
                                     <div style={{ direction: 'rtl' }}>
-                                    <PortGrid
-                                        portCount={rightObj.port_count}
-                                        onPortSelect={handleRightPortSelect}
-                                        selectedPort={selectedRightPort}
-                                        occupiedPorts={rightOccupied}
-                                        cablePorts={rightCablePorts}
-                                        side="left"
-                                    />
+                                        <PortGrid
+                                            portCount={rightObj.port_count}
+                                            onPortSelect={handleRightPortSelect}
+                                            selectedPort={selectedRightPort}
+                                            occupiedPorts={rightOccupied}
+                                            cablePorts={rightCablePorts}
+                                            connectedPorts={rightConnectedPorts}
+                                            side="left"
+                                        />
                                     </div>
                                 </>
                             ) : (

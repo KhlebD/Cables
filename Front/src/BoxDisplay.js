@@ -80,6 +80,7 @@ function BoxDisplay({
 
     const leftOccupiedPorts = useMemo(() => getOccupiedPorts(leftCabinetObj), [leftCabinetObj]);
     const rightOccupiedPorts = useMemo(() => getOccupiedPorts(rightCabinetObj), [rightCabinetObj]);
+
     const leftCablePorts = useMemo(() =>
         getCablePortsForCabinet(leftCabinetObj, selectedCable),
         [leftCabinetObj, selectedCable]
@@ -89,9 +90,10 @@ function BoxDisplay({
         getCablePortsForCabinet(rightCabinetObj, selectedCable),
         [rightCabinetObj, selectedCable]
     );
-    // Get cables to display based on selection mode
+
+
     const displayedCables = useMemo(() => {
-        
+
         if (leftCabinetObj && rightCabinetObj) {
             if (leftCabinetObj.identifier === rightCabinetObj.identifier) {
                 return [];
@@ -124,7 +126,34 @@ function BoxDisplay({
 
         return [];
     }, [leftCabinetObj, rightCabinetObj, buildings, leftBuilding, rightBuilding, selectedLeftCabinet, selectedRightCabinet]);
+    const leftConnectedPorts = useMemo(() => {
+        if (!leftCabinetObj) return [];
+        const ports = [];
+        displayedCables.forEach(cable => {
+            cable.fibers?.forEach(f => {
+                if (cable.cabinet1 === leftCabinetObj.identifier && f.port_cabinet1)
+                    ports.push(parseInt(f.port_cabinet1));
+                else if (cable.cabinet2 === leftCabinetObj.identifier && f.port_cabinet2)
+                    ports.push(parseInt(f.port_cabinet2));
+            });
+        });
+        return ports;
+    }, [leftCabinetObj, displayedCables]);
 
+    const rightConnectedPorts = useMemo(() => {
+        if (!rightCabinetObj) return [];
+        const ports = [];
+        displayedCables.forEach(cable => {
+            cable.fibers?.forEach(f => {
+                if (cable.cabinet1 === rightCabinetObj.identifier && f.port_cabinet1)
+                    ports.push(parseInt(f.port_cabinet1));
+                else if (cable.cabinet2 === rightCabinetObj.identifier && f.port_cabinet2)
+                    ports.push(parseInt(f.port_cabinet2));
+            });
+        });
+        return ports;
+    }, [rightCabinetObj, displayedCables]);
+    // Get cables to display based on selection mode
     // Calculate cable positions for SVG
     const getCablePosition = (index, totalCables) => {
         const spacing = 150 / (totalCables + 1);
@@ -389,6 +418,7 @@ function BoxDisplay({
                                         selectedPort={selectedLeftPort}
                                         occupiedPorts={leftOccupiedPorts}
                                         cablePorts={leftCablePorts}
+                                        connectedPorts={leftConnectedPorts}
                                     />
                                 </div>
                             )}
@@ -475,6 +505,7 @@ function BoxDisplay({
                                         selectedPort={selectedRightPort}
                                         occupiedPorts={rightOccupiedPorts}
                                         cablePorts={rightCablePorts}
+                                        connectedPorts={rightConnectedPorts}
                                     />
                                 </div>
                             )}

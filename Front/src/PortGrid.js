@@ -5,7 +5,8 @@ const PortGrid = ({
     onPortSelect,
     selectedPort,
     occupiedPorts = [],
-    cablePorts= []
+    cablePorts= [],
+    connectedPorts = []
 }) => {
     const getPortLayout = (count) => {
         switch(count) {
@@ -77,7 +78,8 @@ const PortGrid = ({
                     'port-circle',
                     isOccupied ? 'port-occupied' : 'port-free',
                     isSelected ? 'port-selected' : '',
-                    isPortInSelectedCable(portNumber) ? 'port-cable-selected' : ''
+                    isPortInSelectedCable(portNumber) ? 'port-cable-selected' : '',
+                    connectedPorts.includes(portNumber) ? 'port-connected' : ''
                 ].filter(Boolean).join(' ');
                
                 ports.push(

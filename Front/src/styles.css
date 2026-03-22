@@ -1156,6 +1156,10 @@ ul {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
+.port-circle.port-connected {
+    box-shadow: 0 0 0 2px #ff9800;
+    border-color: #ff9800;
+}
 /* Port states */
 .port-free {
     border-color: #ccc;
@@ -1575,6 +1579,7 @@ ul {
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
+    justify-content: center;
 }
 
 .modal-component-card {
@@ -1594,12 +1599,13 @@ ul {
 }
 
 .modal-category-divider {
+    opacity: 1;
     display: flex;
     align-items: center;
     gap: 10px;
     margin: 12px 0;
-    color: #aaa;
-    font-size: 12px;
+    color: #555;
+    font-weight: bold;
 }
 
 .modal-category-divider::before,
