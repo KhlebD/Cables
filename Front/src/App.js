@@ -4,6 +4,7 @@ import FiberDisplay from './FiberDisplay';
 import Store from './Store';
 import BoxDisplay from './BoxDisplay';
 import CabinetModal from './CabinetModal';
+import PathModal from'./pathModal';
 
 export default function App() {
     const fetchNetwork = Store(state => state.fetchNetwork);
@@ -17,6 +18,7 @@ export default function App() {
     const [selectedLeftPort, setSelectedLeftPort] = useState(null);
     const [selectedRightPort, setSelectedRightPort] = useState(null);
     const [cabinetModalData, setCabinetModalData] = useState(null);
+    const [pathData, setPathData] = useState(null)
 
     useEffect(() => {
         fetchNetwork().then(result => {
@@ -77,6 +79,7 @@ export default function App() {
                     onLeftPortSelect={setSelectedLeftPort}
                     onRightPortSelect={setSelectedRightPort}
                     onFiberSelect={setSelectedFiber}
+                    onShowPath={(data) => setPathData(data)}
                 />
                 <FiberDisplay
                     selectedCable={selectedCable}
@@ -90,9 +93,10 @@ export default function App() {
                 <CabinetModal
                     cabinet={cabinetModalData}
                     onClose={() => setCabinetModalData(null)}
+                    onShowPath={(data) => setPathData(data)}
                 />
             )}
-            
+            {pathData && <PathModal pathData={pathData} onClose={() => setPathData(null)} />}
         </div>
     )
 };

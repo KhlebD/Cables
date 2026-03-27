@@ -1157,7 +1157,7 @@ ul {
 }
 
 .port-circle.port-connected {
-    box-shadow: 0 0 0 2px #ff9800;
+    box-shadow: 0 0 0 1px #ff9800;
     border-color: #ff9800;
 }
 /* Port states */
@@ -1773,4 +1773,141 @@ ul {
     font-size: 13px;
     padding: 20px;
     text-align: center;
+}
+/* PATH MODAL */
+.path-modal-overlay {
+    z-index: 1100;
+}
+ 
+.path-modal-box {
+    width: 92vw;
+    max-width: 1400px;
+    max-height: 88vh;
+}
+ 
+.path-network-badge {
+    margin-right: 12px;
+    padding: 3px 10px;
+    background: #dce6f5;
+    border: 1.5px solid #7a9cc7;
+    border-radius: 12px;
+    font-size: 13px;
+    color: #1a4a7a;
+    font-weight: normal;
+}
+ 
+.path-scroll-area {
+    overflow: auto;
+    padding: 24px;
+    min-height: 200px;
+}
+ 
+.path-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+}
+ 
+.path-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 0;
+}
+ 
+.path-row-reversed {
+    flex-direction: row-reverse;
+}
+ 
+/* Building box */
+.path-building {
+    border: 2px solid #7a9cc7;
+    border-radius: 12px;
+    padding: 12px 16px;
+    background: #f0f5ff;
+    min-width: 120px;
+}
+ 
+.path-building-label {
+    font-size: 12px;
+    font-weight: bold;
+    color: #7a9cc7;
+    margin-bottom: 10px;
+    text-align: center;
+}
+ 
+.path-building-content {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0;
+}
+ 
+/* Cabinet box */
+.path-cabinet {
+    border: 2px solid #aaa;
+    border-radius: 8px;
+    padding: 8px 12px;
+    background: white;
+    min-width: 80px;
+}
+ 
+.path-cabinet-label {
+    font-size: 11px;
+    color: #666;
+    margin-bottom: 8px;
+    text-align: center;
+    font-weight: bold;
+}
+ 
+/* Ports */
+.path-ports {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+}
+ 
+.path-port {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+ 
+.path-port-circle {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 2px solid #2196F3;
+    background: #e3f2fd;
+    color: #1565c0;
+    font-size: 11px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+ 
+.path-port-connector {
+    width: 20px;
+    height: 2px;
+    background: #aaa;
+}
+ 
+/* Connectors between cabinets and buildings */
+.path-connector {
+    width: 30px;
+    height: 2px;
+    background: #aaa;
+    flex-shrink: 0;
+}
+ 
+/* Snake turn indicator */
+.path-snake-turn {
+    width: 20px;
+    height: 2px;
+    background: transparent;
+    flex-shrink: 0;
 }

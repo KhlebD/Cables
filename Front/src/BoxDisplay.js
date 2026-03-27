@@ -20,7 +20,8 @@ function BoxDisplay({
     onCableSelect,
     onLeftPortSelect,
     onRightPortSelect,
-    onFiberSelect
+    onFiberSelect,
+    onShowPath
 }) {
     const buildings = Store(state => state.buildings);
     const [hoveredCableId, setHoveredCableId] = useState(null);
@@ -222,7 +223,8 @@ function BoxDisplay({
         onCableSelect(null);
         if (selectedLeftPort === portNumber) {
             onLeftPortSelect(null);
-
+            setCurrentPath(null);
+            return;
         }
         else {
             onLeftPortSelect(portNumber);
@@ -236,6 +238,8 @@ function BoxDisplay({
                 onCableSelect(connectedPort.cable.uid);
                 onRightPortSelect(connectedPort.portNumber);
                 onFiberSelect(connectedPort.fiber);
+                const path = findPath(leftCabinetObj.identifier, portNumber);
+                setCurrentPath(path);
             }
         }
     };
@@ -245,6 +249,8 @@ function BoxDisplay({
         onCableSelect(null);
         if (selectedRightPort === portNumber) {
             onRightPortSelect(null);
+            setCurrentPath(null);
+            return;
         }
         else {
             onRightPortSelect(portNumber);
@@ -257,6 +263,8 @@ function BoxDisplay({
                 onCableSelect(connectedPort.cable.uid);
                 onLeftPortSelect(connectedPort.portNumber);
                 onFiberSelect(connectedPort.fiber);
+                const path = findPath(rightCabinetObj.identifier, portNumber);
+                setCurrentPath(path);
             }
         }
     };
@@ -385,9 +393,73 @@ function BoxDisplay({
         else
             onCableSelect(cable.uid);
     }
+    const [currentPath, setCurrentPath] = useState(null);
+    const findPath = (startCabinetId, startPort) => {
+        const allBuildings = Store.getState().buildings;
 
-    console.log(leftCabinetObj);
+        const getAllCabinets = () => {
+            const cabinets = [];
+            allBuildings.forEach(b => b.cabinets?.forEach(c => cabinets.push({ ...c, buildingName: b.name })));
+            return cabinets;
+        };
 
+        const findFiberAtPort = (cabinetId, portNumber, side) => {
+            const allCabinets = getAllCabinets();
+            const cabinet = allCabinets.find(c => c.identifier === cabinetId);
+            if (!cabinet) return null;
+
+            for (const cable of cabinet.cables || []) {
+                for (const fiber of cable.fibers || []) {
+                    if (fiber.side !== side) continue;
+                    if (cable.cabinet1 === cabinetId && parseInt(fiber.port_cabinet1) === portNumber)
+                        return { cable, fiber, otherCabinetId: cable.cabinet2, otherPort: parseInt(fiber.port_cabinet2) };
+                    if (cable.cabinet2 === cabinetId && parseInt(fiber.port_cabinet2) === portNumber)
+                        return { cable, fiber, otherCabinetId: cable.cabinet1, otherPort: parseInt(fiber.port_cabinet1) };
+                }
+            }
+            return null;
+        };
+
+        const traverse = (cabinetId, portNumber, arrivingSide, visited = new Set()) => {
+            const key = `${cabinetId}:${portNumber}:${arrivingSide}`;
+            if (visited.has(key)) return [];
+            visited.add(key);
+
+            const allCabinets = getAllCabinets();
+            const cabinet = allCabinets.find(c => c.identifier === cabinetId);
+            const buildingName = cabinet?.buildingName || '';
+
+            const path = [{ cabinet: cabinetId, port: portNumber, side: arrivingSide, building: buildingName }];
+
+            const continueSide = arrivingSide === 'back' ? 'front' : 'back';
+            const next = findFiberAtPort(cabinetId, portNumber, continueSide);
+            if (next) {
+                const rest = traverse(next.otherCabinetId, next.otherPort, continueSide, visited);
+                return [...path, ...rest];
+            }
+            return path;
+        };
+
+        const backPath = traverse(startCabinetId, startPort, 'back');
+        const frontPath = traverse(startCabinetId, startPort, 'front');
+        const fullPath = [...backPath.slice(1).reverse(), ...frontPath];
+
+        // Get network from any fiber along the path
+        const network = (() => {
+            for (const step of fullPath) {
+                const allCabinets = getAllCabinets();
+                const cabinet = allCabinets.find(c => c.identifier === step.cabinet);
+                for (const cable of cabinet?.cables || []) {
+                    for (const fiber of cable.fibers || []) {
+                        if (fiber.network) return fiber.network;
+                    }
+                }
+            }
+            return null;
+        })();
+
+        return { steps: fullPath, network };
+    };
     return (
         <div className="cable-display">
             <div className={`building-boxes ${shouldDisplayPorts(leftCabinetObj) || shouldDisplayPorts(rightCabinetObj) ? 'ports-mode' : ''}`}>
@@ -620,7 +692,11 @@ function BoxDisplay({
                         }}
                     />
                 )}
-
+                {currentPath?.steps?.length > 0 && (
+                    <button className="nav-button" onClick={() => onShowPath(currentPath)}>
+                        הצג מסלול
+                    </button>
+                )}
             </div>
         </div>
     );
