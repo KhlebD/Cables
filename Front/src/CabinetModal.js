@@ -307,7 +307,7 @@ function CabinetModal({ cabinet, onClose }) {
                                 <div className="modal-no-cables">אין חיבורים</div>
                             )}
                             {leftObj && rightObj && (
-                                <div className="add-remove-container" style={{ flexDirection: 'column', marginTop: 12 }}>
+                                <div className="add-remove-container" style={{ marginTop: 12 }}>
                                     <AddButton
                                         itemType="כבל"
                                         initialValues={{
@@ -336,7 +336,7 @@ function CabinetModal({ cabinet, onClose }) {
                                     />
                                     {selectedCable && (
                                         <RemoveButton
-                                            itemType="כבל חזית"
+                                            itemType="כבל"
                                             onRemove={async () => {
                                                 const tmp = selectedCable;
                                                 setSelectedCable(null);
