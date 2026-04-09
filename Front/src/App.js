@@ -4,7 +4,7 @@ import FiberDisplay from './FiberDisplay';
 import Store from './Store';
 import BoxDisplay from './BoxDisplay';
 import CabinetModal from './CabinetModal';
-import PathModal from'./pathModal';
+import PathModal from './pathModal';
 
 export default function App() {
     const fetchNetwork = Store(state => state.fetchNetwork);
@@ -96,7 +96,16 @@ export default function App() {
                     onShowPath={(data) => setPathData(data)}
                 />
             )}
-            {pathData && <PathModal pathData={pathData} onClose={() => setPathData(null)} />}
+            {pathData && <PathModal
+                pathData={pathData}
+                onClose={() => setPathData(null)}
+                onAddNetwork={async (network) => {
+                    const cableUIDs = [...new Set(pathData.steps.map(s => s.cableUID).filter(Boolean))];
+                    for (const uid of cableUIDs) {
+                        await Store.getState().updateCableNetworks(uid, network);
+                    }
+                }}
+            />}
         </div>
     )
 };

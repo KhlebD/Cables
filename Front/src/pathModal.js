@@ -1,8 +1,9 @@
 import React, { useMemo } from 'react';
+import AddButton from './AddButton';
 
 const BUILDINGS_PER_ROW = 5;
 
-function PathModal({ pathData, onClose }) {
+function PathModal({ pathData, onClose, onAddNetwork }) {
     const { steps, network } = pathData;
 
     // Group steps by cabinet, preserving order
@@ -106,6 +107,24 @@ function PathModal({ pathData, onClose }) {
                             <span className="path-network-badge">{network}</span>
                         )}
                     </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        {network && <span className="path-network-badge">{network}</span>}
+                        <AddButton
+                            itemType="רשת למסלול"
+                            fields={[
+                                {
+                                    name: 'network',
+                                    label: 'שם הרשת',
+                                    type: 'text',
+                                    required: true,
+                                    placeholder: 'הכנס שם רשת'
+                                }
+                            ]}
+                            onAdd={async (formData) => {
+                                await onAddNetwork(formData.network);
+                            }}
+                        />
+                    </div>
                     <button className="modal-close" onClick={onClose}>✕</button>
                 </div>
 

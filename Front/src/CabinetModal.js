@@ -227,11 +227,12 @@ function CabinetModal({ cabinet, onClose }) {
 
                 {/* Header */}
                 <div className="modal-header">
+                    <div />
                     <span className="modal-title">
                         {CABINET_ICONS[cabinet.cabinet_type] || ''} {cabinet.identifier}
                         <span className="modal-subtitle"> — {buildingName}</span>
                     </span>
-                    <button className="modal-close" onClick={onClose}>✕</button>
+                    <button className="modal-close"  onClick={onClose} >✕</button>
                 </div>
 
                 {/* Single component list */}
@@ -341,6 +342,23 @@ function CabinetModal({ cabinet, onClose }) {
                                                 const tmp = selectedCable;
                                                 setSelectedCable(null);
                                                 await Store.getState().removeCable(tmp);
+                                            }}
+                                        />
+                                    )}
+                                    {selectedCable && (
+                                        <AddButton
+                                            itemType="רשת"
+                                            fields={[
+                                                {
+                                                    name: 'network',
+                                                    label: 'שם הרשת',
+                                                    type: 'text',
+                                                    required: true,
+                                                    placeholder: 'הכנס שם רשת'
+                                                }
+                                            ]}
+                                            onAdd={async (formData) => {
+                                                await Store.getState().updateCableNetworks(selectedCable, formData.network);
                                             }}
                                         />
                                     )}

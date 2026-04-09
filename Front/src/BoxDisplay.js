@@ -228,7 +228,8 @@ function BoxDisplay({
         }
         else {
             onLeftPortSelect(portNumber);
-
+            const path = findPath(leftCabinetObj.identifier, portNumber);
+            setCurrentPath(path);
             // Find connected port
             const connectedPort = findConnectedPort(leftCabinetObj, portNumber);
             if (connectedPort) {
@@ -238,8 +239,8 @@ function BoxDisplay({
                 onCableSelect(connectedPort.cable.uid);
                 onRightPortSelect(connectedPort.portNumber);
                 onFiberSelect(connectedPort.fiber);
-                const path = findPath(leftCabinetObj.identifier, portNumber);
-                setCurrentPath(path);
+
+
             }
         }
     };
@@ -254,6 +255,8 @@ function BoxDisplay({
         }
         else {
             onRightPortSelect(portNumber);
+            const path = findPath(rightCabinetObj.identifier, portNumber);
+            setCurrentPath(path);
             // Find connected port (works for any port, any cable)
             const connectedPort = findConnectedPort(rightCabinetObj, portNumber);
             if (connectedPort) {
@@ -263,8 +266,8 @@ function BoxDisplay({
                 onCableSelect(connectedPort.cable.uid);
                 onLeftPortSelect(connectedPort.portNumber);
                 onFiberSelect(connectedPort.fiber);
-                const path = findPath(rightCabinetObj.identifier, portNumber);
-                setCurrentPath(path);
+
+
             }
         }
     };
@@ -429,14 +432,22 @@ function BoxDisplay({
             const cabinet = allCabinets.find(c => c.identifier === cabinetId);
             const buildingName = cabinet?.buildingName || '';
 
-            const path = [{ cabinet: cabinetId, port: portNumber, side: arrivingSide, building: buildingName }];
+
 
             const continueSide = arrivingSide === 'back' ? 'front' : 'back';
             const next = findFiberAtPort(cabinetId, portNumber, continueSide);
+            const path = [{
+                cabinet: cabinetId,
+                port: portNumber,
+                side: arrivingSide,
+                building: buildingName,
+                cableUID: next?.cable?.uid || null
+            }];
             if (next) {
                 const rest = traverse(next.otherCabinetId, next.otherPort, continueSide, visited);
                 return [...path, ...rest];
             }
+
             return path;
         };
 
@@ -444,14 +455,16 @@ function BoxDisplay({
         const frontPath = traverse(startCabinetId, startPort, 'front');
         const fullPath = [...backPath.slice(1).reverse(), ...frontPath];
 
-        // Get network from any fiber along the path
         const network = (() => {
-            for (const step of fullPath) {
-                const allCabinets = getAllCabinets();
-                const cabinet = allCabinets.find(c => c.identifier === step.cabinet);
-                for (const cable of cabinet?.cables || []) {
-                    for (const fiber of cable.fibers || []) {
-                        if (fiber.network) return fiber.network;
+            const allCabinets = getAllCabinets();
+            const cabinet = allCabinets.find(c => c.identifier === startCabinetId);
+            for (const cable of cabinet?.cables || []) {
+                for (const fiber of cable.fibers || []) {
+                    const port = cable.cabinet1 === startCabinetId
+                        ? fiber.port_cabinet1
+                        : fiber.port_cabinet2;
+                    if (parseInt(port) === startPort && fiber.network) {
+                        return fiber.network;
                     }
                 }
             }
@@ -492,6 +505,13 @@ function BoxDisplay({
                                         cablePorts={leftCablePorts}
                                         connectedPorts={leftConnectedPorts}
                                     />
+                                    <button
+                                        className="nav-button"
+                                        style={{ marginTop: 'auto', visibility: currentPath?.steps?.length > 1 ? 'visible' : 'hidden' }}
+                                        onClick={() => onShowPath(currentPath)}
+                                    >
+                                        הצג מסלול
+                                    </button>
                                 </div>
                             )}
                         </div>
@@ -579,6 +599,13 @@ function BoxDisplay({
                                         cablePorts={rightCablePorts}
                                         connectedPorts={rightConnectedPorts}
                                     />
+                                    <button
+                                        className="nav-button"
+                                        style={{ marginTop: 'auto', visibility: currentPath?.steps?.length > 1 ? 'visible' : 'hidden' }}
+                                        onClick={() => onShowPath(currentPath)}
+                                    >
+                                        הצג מסלול
+                                    </button>
                                 </div>
                             )}
                         </div>
@@ -692,11 +719,7 @@ function BoxDisplay({
                         }}
                     />
                 )}
-                {currentPath?.steps?.length > 0 && (
-                    <button className="nav-button" onClick={() => onShowPath(currentPath)}>
-                        הצג מסלול
-                    </button>
-                )}
+
             </div>
         </div>
     );
