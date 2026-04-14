@@ -424,7 +424,8 @@ function BoxDisplay({
         };
 
         const traverse = (cabinetId, portNumber, arrivingSide, visited = new Set()) => {
-            const key = `${cabinetId}:${portNumber}:${arrivingSide}`;
+            const key = `${cabinetId}:${portNumber}`;
+            console.log(`visiting ${cabinetId} port ${portNumber} arriving via ${arrivingSide}, visited: ${visited.has(key)}`);
             if (visited.has(key)) return [];
             visited.add(key);
 
@@ -436,6 +437,7 @@ function BoxDisplay({
 
             const continueSide = arrivingSide === 'back' ? 'front' : 'back';
             const next = findFiberAtPort(cabinetId, portNumber, continueSide);
+            console.log(`continuing via ${continueSide}, found:`, next ? `${next.otherCabinetId} port ${next.otherPort}` : 'nothing');
             const path = [{
                 cabinet: cabinetId,
                 port: portNumber,
@@ -451,8 +453,8 @@ function BoxDisplay({
             return path;
         };
 
-        const backPath = traverse(startCabinetId, startPort, 'back');
-        const frontPath = traverse(startCabinetId, startPort, 'front');
+        const backPath = traverse(startCabinetId, startPort, 'back', new Set());
+        const frontPath = traverse(startCabinetId, startPort, 'front', new Set());
         const fullPath = [...backPath.slice(1).reverse(), ...frontPath];
 
         const network = (() => {

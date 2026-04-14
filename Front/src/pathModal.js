@@ -1,12 +1,10 @@
 import React, { useMemo } from 'react';
 import AddButton from './AddButton';
-
-const BUILDINGS_PER_ROW = 5;
+import Store from './Store';
 
 function PathModal({ pathData, onClose, onAddNetwork }) {
     const { steps, network } = pathData;
 
-    // Group steps by cabinet, preserving order
     const cabinetGroups = useMemo(() => {
         const groups = [];
         steps.forEach(step => {
@@ -24,7 +22,6 @@ function PathModal({ pathData, onClose, onAddNetwork }) {
         return groups;
     }, [steps]);
 
-    // Group cabinet groups by building, preserving order
     const buildingGroups = useMemo(() => {
         const groups = [];
         cabinetGroups.forEach(cabGroup => {
@@ -40,18 +37,6 @@ function PathModal({ pathData, onClose, onAddNetwork }) {
         });
         return groups;
     }, [cabinetGroups]);
-
-    // Split buildings into rows of BUILDINGS_PER_ROW, snake pattern
-    const rows = useMemo(() => {
-        const result = [];
-        for (let i = 0; i < buildingGroups.length; i += BUILDINGS_PER_ROW) {
-            const row = buildingGroups.slice(i, i + BUILDINGS_PER_ROW);
-            const rowIndex = Math.floor(i / BUILDINGS_PER_ROW);
-            // Reverse every other row for snake pattern
-            result.push(rowIndex % 2 === 1 ? [...row].reverse() : row);
-        }
-        return result;
-    }, [buildingGroups]);
 
     const renderCabinet = (cabGroup) => (
         <div key={cabGroup.cabinet} className="path-cabinet">
@@ -69,46 +54,13 @@ function PathModal({ pathData, onClose, onAddNetwork }) {
         </div>
     );
 
-    const renderBuilding = (bGroup, bIndex, row, rowIndex) => {
-        const isLast = bIndex === row.length - 1;
-        const isLastRow = rowIndex === rows.length - 1;
-        const isSnakeEnd = isLast && !isLastRow;
-
-        return (
-            <React.Fragment key={`${bGroup.building}-${rowIndex}-${bIndex}`}>
-                <div className="path-building">
-                    <div className="path-building-label">{bGroup.building}</div>
-                    <div className="path-building-content">
-                        {bGroup.cabinets.map((cabGroup, cIndex) => (
-                            <React.Fragment key={cabGroup.cabinet}>
-                                {renderCabinet(cabGroup)}
-                                {cIndex < bGroup.cabinets.length - 1 && (
-                                    <div className="path-connector" />
-                                )}
-                            </React.Fragment>
-                        ))}
-                    </div>
-                </div>
-                {!isLast && <div className="path-connector" />}
-                {isSnakeEnd && <div className="path-snake-turn" />}
-            </React.Fragment>
-        );
-    };
-
     return (
         <div className="modal-overlay path-modal-overlay" onClick={onClose}>
             <div className="modal-box path-modal-box" onClick={e => e.stopPropagation()}>
 
-                {/* Header */}
                 <div className="modal-header">
-                    <span className="modal-title">
-                        מסלול רשת
-                        {network && (
-                            <span className="path-network-badge">{network}</span>
-                        )}
-                    </span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        {network && <span className="path-network-badge">{network}</span>}
+                
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'flex-end' }}>
                         <AddButton
                             itemType="רשת למסלול"
                             fields={[
@@ -125,21 +77,42 @@ function PathModal({ pathData, onClose, onAddNetwork }) {
                             }}
                         />
                     </div>
+                    <span className="modal-title">
+                        {network && (
+                            <span className="path-network-badge">{network}</span>
+                        )}
+                        מסלול רשת
+
+                    </span>
+
                     <button className="modal-close" onClick={onClose}>✕</button>
+
                 </div>
 
-                {/* Path visualization */}
                 <div className="path-scroll-area">
                     {steps.length === 0 ? (
                         <div className="modal-empty">לא נמצא מסלול</div>
                     ) : (
-                        <div className="path-rows">
-                            {rows.map((row, rowIndex) => (
-                                <div key={rowIndex} className={`path-row ${rowIndex % 2 === 1 ? 'path-row-reversed' : ''}`}>
-                                    {row.map((bGroup, bIndex) =>
-                                        renderBuilding(bGroup, bIndex, row, rowIndex)
+                        <div className="path-row">
+                            {buildingGroups.map((bGroup, bIndex) => (
+                                <React.Fragment key={`${bGroup.building}-${bIndex}`}>
+                                    <div className="path-building">
+                                        <div className="path-building-label">{bGroup.building}</div>
+                                        <div className="path-building-content">
+                                            {bGroup.cabinets.map((cabGroup, cIndex) => (
+                                                <React.Fragment key={cabGroup.cabinet}>
+                                                    {renderCabinet(cabGroup)}
+                                                    {cIndex < bGroup.cabinets.length - 1 && (
+                                                        <div className="path-connector" />
+                                                    )}
+                                                </React.Fragment>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    {bIndex < buildingGroups.length - 1 && (
+                                        <div className="path-connector" />
                                     )}
-                                </div>
+                                </React.Fragment>
                             ))}
                         </div>
                     )}
